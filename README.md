@@ -9,7 +9,7 @@ online-learning-platform/
 ├── client/                 # React Frontend
 ├── server/                 # Node.js/Express Backenda# 🎓 Online Learning Platform
 
-A comprehensive full-stack Learning Management System (LMS) built with **React**, **Node.js**, **Express**, and **PostgreSQL**. This platform enables students to enroll in courses, instructors to create and manage educational content, and administrators to oversee the entire system.
+A comprehensive full-stack Learning Management System (LMS) built with React, Node.js, Express, and PostgreSQL. This platform enables students to enroll in courses, instructors to create and manage educational content, and administrators to oversee the entire system.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-18.x-green.svg)
@@ -37,12 +37,12 @@ A comprehensive full-stack Learning Management System (LMS) built with **React**
 
 ## ✨ Features
 
-### 👤 **Multi-Role System**
-- **Students** - Enroll in courses, track progress, take quizzes
-- **Instructors** - Create and manage courses, upload content, view analytics
-- **Admins** - Manage users, courses, and system settings
+### 👤 Multi-Role System
+- Students - Enroll in courses, track progress, take quizzes
+- Instructors - Create and manage courses, upload content, view analytics
+- Admins - Manage users, courses, and system settings
 
-### 📚 **Course Management**
+### 📚 Course Management
 - ✅ Create and publish courses with rich content
 - ✅ Upload video lectures, PDFs, and documents (500MB videos, 50MB docs)
 - ✅ Organize content into modules and lessons
@@ -50,26 +50,26 @@ A comprehensive full-stack Learning Management System (LMS) built with **React**
 - ✅ Advanced search and filtering by category, difficulty, price
 - ✅ Course ratings and reviews
 
-### 🎯 **Learning Experience**
+### 🎯 Learning Experience
 - Interactive video player with progress tracking
 - Course bookmarks and notes
 - Certificate generation upon completion
 - Personalized student dashboard
 - Progress analytics
 
-### 📝 **Assessment System**
+### 📝 Assessment System
 - Create quizzes with multiple question types
 - Automatic grading and instant feedback
 - Quiz attempts tracking
 - Performance analytics and reporting
 
-### 💬 **Discussion Forums**
+### 💬 Discussion Forums
 - Course-specific discussion boards
 - Post questions and get answers
 - Upvote/downvote system
 - Direct instructor responses
 
-### 🔐 **Security & Authentication**
+### 🔐 Security & Authentication
 - JWT-based authentication with refresh tokens
 - Role-based access control (RBAC)
 - Password encryption with bcrypt (10 rounds)
@@ -77,7 +77,7 @@ A comprehensive full-stack Learning Management System (LMS) built with **React**
 - Rate limiting to prevent abuse
 - Input validation and sanitization
 
-### 📊 **Analytics & Reporting**
+### 📊 Analytics & Reporting
 - Student progress tracking
 - Course enrollment statistics
 - Revenue and earnings reports
@@ -88,7 +88,7 @@ A comprehensive full-stack Learning Management System (LMS) built with **React**
 
 ## 🛠️ Tech Stack
 
-### **Frontend**
+### Frontend
 | Technology | Version | Purpose |
 |-----------|---------|---------|
 | React | 18.x | UI library |
@@ -97,7 +97,7 @@ A comprehensive full-stack Learning Management System (LMS) built with **React**
 | Axios | 1.x | HTTP client |
 | Context API | - | State management |
 
-### **Backend**
+### Backend
 | Technology | Version | Purpose |
 |-----------|---------|---------|
 | Node.js | 18+ | JavaScript runtime |
@@ -107,21 +107,21 @@ A comprehensive full-stack Learning Management System (LMS) built with **React**
 | Bcrypt | - | Password hashing |
 | Multer | - | File uploads |
 
-### **DevOps**
-- **Docker** - Containerization
-- **Docker Compose** - Multi-container orchestration
-- **Nginx** - Reverse proxy (production)
+### DevOps
+- Docker - Containerization
+- Docker Compose - Multi-container orchestration
+- Nginx - Reverse proxy (production)
 
-### **Testing**
-- **Jest** - Unit and integration testing
-- **Supertest** - API endpoint testing
-- **React Testing Library** - Component testing
+### Testing
+- Jest - Unit and integration testing
+- Supertest - API endpoint testing
+- React Testing Library - Component testing
 
 ---
 
 ## 🏗️ Architecture
 
-### **System Architecture**
+### System Architecture
 
 ```
 ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
@@ -132,14 +132,14 @@ A comprehensive full-stack Learning Management System (LMS) built with **React**
 └─────────────────┘      └─────────────────┘      └─────────────────┘
 ```
 
-### **Design Patterns**
-- **MVC** - Model-View-Controller architecture
-- **Repository Pattern** - Data access abstraction
-- **Service Layer** - Business logic separation
-- **Singleton Pattern** - Service instances
-- **Factory Pattern** - Model creation
+### Design Patterns
+- MVC - Model-View-Controller architecture
+- Repository Pattern - Data access abstraction
+- Service Layer - Business logic separation
+- Singleton Pattern - Service instances
+- Factory Pattern - Model creation
 
-### **API Architecture**
+### API Architecture
 ```
 HTTP Request
      ↓
@@ -156,16 +156,16 @@ Database (PostgreSQL)
 
 ## 🚀 Getting Started
 
-### **Prerequisites**
+### Prerequisites
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js** 18.x or higher ([Download](https://nodejs.org/))
-- **PostgreSQL** 15.x or higher ([Download](https://www.postgresql.org/download/))
-- **Docker** (optional, for containerized setup) ([Download](https://www.docker.com/))
-- **npm** or **yarn** package manager
+- Node.js 18.x or higher ([Download](https://nodejs.org/))
+- PostgreSQL 15.x or higher ([Download](https://www.postgresql.org/download/))
+- Docker (optional, for containerized setup) ([Download](https://www.docker.com/))
+- npm or yarn package manager
 
-### **Quick Start with Docker** (Recommended)
+### Quick Start with Docker (Recommended)
 
 This is the fastest way to get the application running:
 
@@ -197,9 +197,9 @@ docker-compose logs -f
 
 ## 📦 Installation
 
-### **Manual Setup (Without Docker)**
+### Manual Setup (Without Docker)
 
-#### **Step 1: Database Setup**
+#### Step 1: Database Setup
 
 ```bash
 # Create PostgreSQL database
@@ -221,7 +221,7 @@ psql -U postgres -d learning_platform -f 001_seed_users.sql
 psql -U postgres -d learning_platform -f 002_seed_courses.sql
 ```
 
-#### **Step 2: Backend Setup**
+#### Step 2: Backend Setup
 
 ```bash
 # Navigate to server directory
@@ -243,7 +243,7 @@ npm run dev
 # You should see: "✅ Database connected successfully"
 ```
 
-#### **Step 3: Frontend Setup**
+#### Step 3: Frontend Setup
 
 ```bash
 # Open new terminal and navigate to client directory
@@ -268,24 +268,24 @@ npm start
 
 ## 💻 Usage
 
-### **Default Test Users** (After seeding database)
+### Default Test Users (After seeding database)
 
 | Role | Email | Password | Access Level |
 |------|-------|----------|-------------|
-| **Admin** | admin@example.com | Password@123 | Full system access |
-| **Instructor** | instructor@example.com | Password@123 | Course management |
-| **Student** | student@example.com | Password@123 | Course enrollment |
+| Admin | admin@example.com | Password@123 | Full system access |
+| Instructor | instructor@example.com | Password@123 | Course management |
+| Student | student@example.com | Password@123 | Course enrollment |
 
-### **Getting Started as Different Roles**
+### Getting Started as Different Roles
 
-#### **As a Student:**
+#### As a Student:
 1. Login with student credentials
 2. Browse available courses at `/courses`
 3. Enroll in a course
 4. Access course content and track progress
 5. Take quizzes and earn certificates
 
-#### **As an Instructor:**
+#### As an Instructor:
 1. Login with instructor credentials
 2. Navigate to Instructor Dashboard
 3. Create a new course with "Create Course" button
@@ -293,7 +293,7 @@ npm start
 5. Publish course to make it available to students
 6. View enrollment and revenue analytics
 
-#### **As an Admin:**
+#### As an Admin:
 1. Login with admin credentials
 2. Access Admin Dashboard
 3. Manage users (approve instructors, disable accounts)
@@ -304,12 +304,12 @@ npm start
 
 ## 📡 API Documentation
 
-### **Base URL**
+### Base URL
 ```
 http://localhost:5000/api
 ```
 
-### **Authentication Endpoints**
+### Authentication Endpoints
 
 #### Register User
 ```http
@@ -350,7 +350,7 @@ GET /api/auth/me
 Authorization: Bearer <token>
 ```
 
-### **Course Endpoints**
+### Course Endpoints
 
 #### Get All Published Courses
 ```http
@@ -489,7 +489,7 @@ online-learning-platform/
 
 ## 🧪 Testing
 
-### **Backend Tests**
+### Backend Tests
 
 ```bash
 cd server
@@ -507,7 +507,7 @@ npm test -- auth.test.js
 npm run test:watch
 ```
 
-### **Frontend Tests**
+### Frontend Tests
 
 ```bash
 cd client
@@ -522,7 +522,7 @@ npm test -- --coverage
 npm test
 ```
 
-### **Running Tests in Docker**
+### Running Tests in Docker
 
 ```bash
 # Run backend tests
@@ -536,7 +536,7 @@ docker-compose exec client npm test
 
 ## 🚢 Deployment
 
-### **Production Deployment Checklist**
+### Production Deployment Checklist
 
 Before deploying to production:
 
@@ -555,7 +555,7 @@ Before deploying to production:
 - [ ] Enable security headers
 - [ ] Configure firewall rules
 
-### **Docker Production Deployment**
+### Docker Production Deployment
 
 ```bash
 # 1. Set environment to production
@@ -573,7 +573,7 @@ docker-compose logs -f
 docker-compose ps
 ```
 
-### **Manual Deployment**
+### Manual Deployment
 
 #### Build Frontend
 ```bash
@@ -623,40 +623,40 @@ server {
 
 We welcome contributions from the community! Here's how you can help:
 
-### **How to Contribute**
+### How to Contribute
 
-1. **Fork the repository**
+1. Fork the repository
    ```bash
    git clone https://github.com/yourusername/online-learning-platform.git
    ```
 
-2. **Create a feature branch**
+2. Create a feature branch
    ```bash
    git checkout -b feature/amazing-feature
    ```
 
-3. **Make your changes**
+3. Make your changes
    - Write clean, documented code
    - Follow existing code style
    - Add tests for new features
    - Update documentation
 
-4. **Commit your changes**
+4. Commit your changes
    ```bash
    git commit -m 'Add amazing feature'
    ```
 
-5. **Push to your fork**
+5. Push to your fork
    ```bash
    git push origin feature/amazing-feature
    ```
 
-6. **Open a Pull Request**
+6. Open a Pull Request
    - Describe your changes
    - Link related issues
    - Request review
 
-### **Code Style**
+### Code Style
 
 - Follow ESLint configuration
 - Use Prettier for formatting
@@ -694,7 +694,7 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 ## 👥 Authors & Contributors
 
-- **Development Team** - *Initial work*
+- Development Team - *Initial work*
 - See [Contributors](https://github.com/yourusername/online-learning-platform/contributors) for full list
 
 ---
@@ -712,29 +712,29 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 ## 📞 Support & Contact
 
-- **Documentation:** [GitHub Wiki](https://github.com/yourusername/online-learning-platform/wiki)
-- **Issues:** [GitHub Issues](https://github.com/yourusername/online-learning-platform/issues)
-- **Email:** support@learningplatform.com
-- **Discord:** [Join our community](https://discord.gg/yourserver)
+- Documentation: [GitHub Wiki](https://github.com/yourusername/online-learning-platform/wiki)
+- Issues: [GitHub Issues](https://github.com/yourusername/online-learning-platform/issues)
+- Email: support@learningplatform.com
+- Discord: [Join our community](https://discord.gg/yourserver)
 
 ---
 
 ## 🗺️ Roadmap
 
-### **Phase 1: Core Platform** (✅ Completed)
+### Phase 1: Core Platform (✅ Completed)
 - [x] User authentication and authorization
 - [x] Course creation and management
 - [x] File upload system
 - [x] Student enrollment
 
-### **Phase 2: Enhanced Learning** (🚧 In Progress)
+### Phase 2: Enhanced Learning (🚧 In Progress)
 - [ ] Quiz and assessment system
 - [ ] Video streaming optimization
 - [ ] Discussion forums
 - [ ] Progress tracking
 - [ ] Certificate generation
 
-### **Phase 3: Advanced Features** (📋 Planned)
+### Phase 3: Advanced Features (📋 Planned)
 - [ ] Live video classes (WebRTC)
 - [ ] AI-powered course recommendations
 - [ ] Mobile app (React Native)
@@ -743,7 +743,7 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 - [ ] Payment integration (Stripe)
 - [ ] Progressive Web App (PWA)
 
-### **Phase 4: Scale & Optimize** (🔮 Future)
+### Phase 4: Scale & Optimize (🔮 Future)
 - [ ] Microservices architecture
 - [ ] GraphQL API
 - [ ] Real-time notifications
@@ -755,11 +755,11 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 ## 📊 Project Status
 
-- **Version:** 1.0.0
-- **Status:** ✅ Active Development
-- **Build:** ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-- **Coverage:** ![Coverage](https://img.shields.io/badge/coverage-85%25-green)
-- **Last Updated:** October 2024
+- Version: 1.0.0
+- Status: ✅ Active Development
+- Build: ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+- Coverage: ![Coverage](https://img.shields.io/badge/coverage-85%25-green)
+- Last Updated: October 2024
 
 ---
 
@@ -769,9 +769,9 @@ If you find this project helpful, please consider giving it a ⭐️ on GitHub!
 
 ---
 
-**Built with ❤️ by the Learning Platform Team**
+Built with ❤️ by the Learning Platform Team
 
-**[⬆ back to top](#-online-learning-platform)**
+[⬆ back to top](#-online-learning-platform)
 ├── database/              # Database scripts and migrations
 ├── docker/                # Docker configurations
 ├── docker-compose.yml     # Multi-container orchestration
