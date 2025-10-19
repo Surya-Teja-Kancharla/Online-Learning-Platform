@@ -1,213 +1,182 @@
 /**
- * Multer Configuration for File Uploads
- * Handles video, PDF, and image uploads with validation
+ * File Upload Configuration
+ * Handles file uploads using Multer
  */
 
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../../uploads');
-const coursesDir = path.join(uploadsDir, 'courses');
-const videosDir = path.join(coursesDir, 'videos');
-const thumbnailsDir = path.join(coursesDir, 'thumbnails');
-const documentsDir = path.join(coursesDir, 'documents');
+// Ensure upload directories exist
+const uploadDirs = {
+  thumbnails: path.join(__dirname, '../../uploads/thumbnails'),
+  videos: path.join(__dirname, '../../uploads/videos'),
+  documents: path.join(__dirname, '../../uploads/documents'),
+};
 
-// Create directories
-[uploadsDir, coursesDir, videosDir, thumbnailsDir, documentsDir].forEach(dir => {
+Object.values(uploadDirs).forEach((dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 });
 
-/**
- * Storage configuration
- */
-const storage = multer.diskStorage({
+// Storage configuration for thumbnails
+const thumbnailStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let uploadPath = coursesDir;
-    
-    // Determine upload path based on file type
-    if (file.fieldname === 'video') {
-      uploadPath = videosDir;
-    } else if (file.fieldname === 'thumbnail') {
-      uploadPath = thumbnailsDir;
-    } else if (file.fieldname === 'document') {
-      uploadPath = documentsDir;
-    }
-    
-    cb(null, uploadPath);
+    cb(null, uploadDirs.thumbnails);
   },
   filename: (req, file, cb) => {
-    // Generate unique filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    const baseName = path.basename(file.originalname, ext)
-      .replace(/[^a-zA-Z0-9]/g, '-')
-      .substring(0, 50);
-    
-    cb(null, `${baseName}-${uniqueSuffix}${ext}`);
-  }
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, `thumbnail-${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
 });
 
-/**
- * File filter for validation
- */
-const fileFilter = (req, file, cb) => {
-  // Allowed file types
-  const allowedVideoTypes = /mp4|avi|mov|wmv|flv|mkv|webm/;
-  const allowedImageTypes = /jpeg|jpg|png|gif|webp/;
-  const allowedDocumentTypes = /pdf|doc|docx|txt|ppt|pptx/;
+// Storage configuration for videos
+const videoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDirs.videos);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, `video-${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
+});
+
+// Storage configuration for documents
+const documentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDirs.documents);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, `document-${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
+});
+
+// File filter for images
+const imageFilter = (req, file, cb) => {
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
   
-  const ext = path.extname(file.originalname).toLowerCase().substring(1);
-  const mimeType = file.mimetype;
-  
-  // Validate based on field name
-  if (file.fieldname === 'video') {
-    if (allowedVideoTypes.test(ext) && mimeType.startsWith('video/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid video format. Allowed: mp4, avi, mov, wmv, flv, mkv, webm'));
-    }
-  } else if (file.fieldname === 'thumbnail') {
-    if (allowedImageTypes.test(ext) && mimeType.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid image format. Allowed: jpeg, jpg, png, gif, webp'));
-    }
-  } else if (file.fieldname === 'document') {
-    if (allowedDocumentTypes.test(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid document format. Allowed: pdf, doc, docx, txt, ppt, pptx'));
-    }
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
   } else {
-    cb(new Error('Unknown file field'));
+    cb(new Error('Invalid file type. Only JPEG, PNG, GIF and WebP images are allowed.'), false);
   }
 };
 
-/**
- * Multer upload configuration
- */
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
+// File filter for videos
+const videoFilter = (req, file, cb) => {
+  const allowedMimeTypes = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm'];
+  
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only MP4, MPEG, MOV and WebM videos are allowed.'), false);
+  }
+};
+
+// File filter for documents
+const documentFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ];
+  
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only PDF and Word documents are allowed.'), false);
+  }
+};
+
+// Multer upload instances
+const uploadThumbnail = multer({
+  storage: thumbnailStorage,
+  fileFilter: imageFilter,
   limits: {
-    fileSize: 500 * 1024 * 1024, // 500MB max file size
-    files: 5 // Max 5 files per request
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+}).single('thumbnail');
+
+const uploadVideo = multer({
+  storage: videoStorage,
+  fileFilter: videoFilter,
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB
+  },
+}).single('video');
+
+const uploadDocument = multer({
+  storage: documentStorage,
+  fileFilter: documentFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+}).single('document');
+
+// Multiple file upload (for lessons with multiple resources)
+const uploadMultipleFiles = multer({
+  storage: documentStorage,
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+      'video/mp4',
+    ];
+    
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type'), false);
+    }
+  },
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB per file
+    files: 10, // Maximum 10 files
+  },
+}).array('files', 10);
+
+// Error handler middleware for multer
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File size too large',
+      });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        success: false,
+        message: 'Too many files',
+      });
+    }
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Unexpected file field',
+      });
+    }
   }
-});
-
-/**
- * Upload middleware configurations
- */
-const uploadConfig = {
-  // Single video upload
-  video: upload.single('video'),
   
-  // Single thumbnail upload
-  thumbnail: upload.single('thumbnail'),
-  
-  // Single document upload
-  document: upload.single('document'),
-  
-  // Multiple fields (video, thumbnail, documents)
-  courseFiles: upload.fields([
-    { name: 'video', maxCount: 1 },
-    { name: 'thumbnail', maxCount: 1 },
-    { name: 'documents', maxCount: 5 }
-  ]),
-  
-  // Multiple documents
-  documents: upload.array('documents', 5)
-};
-
-/**
- * Get file URL from file path
- * @param {string} filePath - File path
- * @returns {string} - Public URL
- */
-const getFileUrl = (filePath) => {
-  if (!filePath) return null;
-  
-  // In production, replace with your CDN or cloud storage URL
-  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
-  const relativePath = filePath.replace(/\\/g, '/').split('uploads/')[1];
-  return `${baseUrl}/uploads/${relativePath}`;
-};
-
-/**
- * Delete file from filesystem
- * @param {string} filePath - File path to delete
- * @returns {Promise<boolean>}
- */
-const deleteFile = (filePath) => {
-  return new Promise((resolve, reject) => {
-    if (!filePath) {
-      resolve(true);
-      return;
-    }
-    
-    // Convert URL to file path if necessary
-    let actualPath = filePath;
-    if (filePath.startsWith('http')) {
-      const urlPath = filePath.split('/uploads/')[1];
-      actualPath = path.join(uploadsDir, urlPath);
-    }
-    
-    fs.unlink(actualPath, (err) => {
-      if (err) {
-        console.error('Error deleting file:', err);
-        resolve(false);
-      } else {
-        resolve(true);
-      }
+  if (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'File upload error',
     });
-  });
-};
-
-/**
- * Get file size in MB
- * @param {string} filePath - File path
- * @returns {Promise<number>}
- */
-const getFileSize = (filePath) => {
-  return new Promise((resolve, reject) => {
-    fs.stat(filePath, (err, stats) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve((stats.size / (1024 * 1024)).toFixed(2));
-      }
-    });
-  });
-};
-
-/**
- * Validate file size
- * @param {object} file - Multer file object
- * @param {number} maxSizeMB - Maximum size in MB
- * @returns {boolean}
- */
-const validateFileSize = (file, maxSizeMB) => {
-  if (!file) return true;
-  const fileSizeMB = file.size / (1024 * 1024);
-  return fileSizeMB <= maxSizeMB;
+  }
+  
+  next();
 };
 
 module.exports = {
-  upload,
-  uploadConfig,
-  getFileUrl,
-  deleteFile,
-  getFileSize,
-  validateFileSize,
-  paths: {
-    uploadsDir,
-    coursesDir,
-    videosDir,
-    thumbnailsDir,
-    documentsDir
-  }
+  uploadThumbnail,
+  uploadVideo,
+  uploadDocument,
+  uploadMultipleFiles,
+  handleMulterError,
 };

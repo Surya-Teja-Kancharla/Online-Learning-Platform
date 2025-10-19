@@ -1,27 +1,31 @@
 /**
  * Student Dashboard
- * Main dashboard for students with enrolled courses and progress tracking
+ * Main dashboard for students showing enrolled courses and progress
  */
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useCourses } from '../../context/CourseContext';
 import { useToast } from '../../context/ToastContext';
-import enrollmentService from '../../services/enrollmentService';
-import EnrolledCourseCard from '../../components/course/EnrolledCourseCard';
-import CircularProgress from '../../components/common/CircularProgress';
-import Button from '../../components/common/Button';
+import {
+  BookOpen,
+  Clock,
+  Award,
+  TrendingUp,
+  PlayCircle,
+  CheckCircle,
+  Search,
+} from 'lucide-react';
 
 const StudentDashboard = () => {
-  const { user, logout } = useAuth();
-  const { enrollments, loadEnrollments } = useCourses();
-  const toast = useToast();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const toast = useToast();
 
+  const [enrollments, setEnrollments] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, in-progress, completed
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadDashboardData();
@@ -30,241 +34,266 @@ const StudentDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      await loadEnrollments();
-      const statsData = await enrollmentService.getStudentStats();
-      setStats(statsData);
+      const token = localStorage.getItem('token');
+
+      // Load enrollments
+      const enrollmentsRes = await fetch(
+        'http://localhost:5000/api/enrollments/my-enrollments',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const enrollmentsData = await enrollmentsRes.json();
+
+      // Load stats
+      const statsRes = await fetch('http://localhost:5000/api/enrollments/stats', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const statsData = await statsRes.json();
+
+      setEnrollments(enrollmentsData.data.enrollments || []);
+      setStats(statsData.data.stats || {});
     } catch (error) {
+      console.error('Error loading dashboard:', error);
       toast.error('Failed to load dashboard data');
-      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  const getFilteredEnrollments = () => {
-    if (filter === 'completed') {
-      return enrollments.filter(e => e.completed_at);
-    }
-    if (filter === 'in-progress') {
-      return enrollments.filter(e => !e.completed_at && e.progress > 0);
-    }
-    return enrollments;
+  const handleContinueLearning = (courseId) => {
+    navigate(`/student/courses/${courseId}/learn`);
   };
 
-  const filteredEnrollments = getFilteredEnrollments();
+  const filteredEnrollments = enrollments.filter((enrollment) =>
+    enrollment.course_title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const calculateAverageProgress = () => {
-    if (enrollments.length === 0) return 0;
-    const total = enrollments.reduce((sum, e) => sum + e.progress, 0);
-    return Math.round(total / enrollments.length);
-  };
-
-  const averageProgress = calculateAverageProgress();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Student Dashboard</h1>
-            <p className="text-sm text-gray-600 mt-1">Welcome back, {user?.name}!</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/student/browse')}
-            >
-              Browse Courses
-            </Button>
-            <Button variant="outline" size="sm" onClick={logout}>
-              Logout
-            </Button>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">My Dashboard</h1>
+              <p className="text-gray-600 mt-1">Welcome back, {user?.name}!</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/student/browse')}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Browse Courses
+              </button>
+              <button
+                onClick={logout}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : (
-          <>
-            {/* Statistics Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {/* Total Courses */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Enrolled Courses</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats?.totalEnrollments || 0}</p>
-                  </div>
-                  <div className="p-3 bg-blue-100 rounded-full">
-                    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              {/* In Progress */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">In Progress</p>
-                    <p className="text-3xl font-bold text-yellow-600">{stats?.inProgress || 0}</p>
-                  </div>
-                  <div className="p-3 bg-yellow-100 rounded-full">
-                    <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              {/* Completed */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Completed</p>
-                    <p className="text-3xl font-bold text-green-600">{stats?.completed || 0}</p>
-                  </div>
-                  <div className="p-3 bg-green-100 rounded-full">
-                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              {/* Average Progress */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Avg. Progress</p>
-                    <p className="text-3xl font-bold text-purple-600">{averageProgress}%</p>
-                  </div>
-                  <div className="p-3 bg-purple-100 rounded-full">
-                    <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Progress Visualization */}
-            {enrollments.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-6 mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Learning Progress Overview</h3>
-                <div className="flex items-center justify-center">
-                  <CircularProgress
-                    progress={averageProgress}
-                    size={160}
-                    strokeWidth={12}
-                    label="Overall Progress"
-                  />
-                </div>
-                <div className="mt-6 grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-2xl font-bold text-blue-600">{stats?.totalEnrollments || 0}</p>
-                    <p className="text-sm text-gray-600">Total Courses</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-yellow-600">{stats?.inProgress || 0}</p>
-                    <p className="text-sm text-gray-600">In Progress</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-green-600">{stats?.completed || 0}</p>
-                    <p className="text-sm text-gray-600">Completed</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Filters */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setFilter('all')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    filter === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  All Courses
-                </button>
-                <button
-                  onClick={() => setFilter('in-progress')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    filter === 'in-progress'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  In Progress
-                </button>
-                <button
-                  onClick={() => setFilter('completed')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    filter === 'completed'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Completed
-                </button>
-              </div>
-
-              <Button
-                variant="primary"
-                onClick={() => navigate('/student/browse')}
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Browse More Courses
-              </Button>
-            </div>
-
-            {/* Enrolled Courses */}
-            {filteredEnrollments.length === 0 ? (
-              <div className="bg-white rounded-lg shadow p-12 text-center">
-                <svg className="w-20 h-20 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {filter === 'all' ? 'No courses enrolled yet' : `No ${filter.replace('-', ' ')} courses`}
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  {filter === 'all' 
-                    ? 'Start your learning journey by enrolling in a course!'
-                    : `You don't have any ${filter.replace('-', ' ')} courses yet.`
-                  }
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Enrolled Courses</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">
+                  {stats?.total_enrollments || 0}
                 </p>
-                <Button
-                  variant="primary"
-                  onClick={() => navigate('/student/browse')}
+              </div>
+              <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-indigo-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">In Progress</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">
+                  {stats?.in_progress || 0}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Completed</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">
+                  {stats?.completed_courses || 0}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Award className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Avg Progress</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">
+                  {Math.round(stats?.average_progress || 0)}%
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search your courses..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        {/* Course List */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-6 border-b">
+            <h2 className="text-xl font-bold text-gray-900">My Courses</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {filteredEnrollments.length} course
+              {filteredEnrollments.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+
+          {filteredEnrollments.length === 0 ? (
+            <div className="p-12 text-center">
+              <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No courses found
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {searchQuery
+                  ? 'Try a different search term'
+                  : "You haven't enrolled in any courses yet"}
+              </p>
+              <button
+                onClick={() => navigate('/student/browse')}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Browse Courses
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {filteredEnrollments.map((enrollment) => (
+                <div
+                  key={enrollment.id}
+                  className="p-6 hover:bg-gray-50 transition-colors"
                 >
-                  Explore Courses
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredEnrollments.map(enrollment => (
-                  <EnrolledCourseCard
-                    key={enrollment.id}
-                    enrollment={enrollment}
-                    course={enrollment.course || {}}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
+                  <div className="flex items-start justify-between">
+                    <div className="flex gap-4 flex-1">
+                      {/* Course Thumbnail */}
+                      <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                        {enrollment.thumbnail_url ? (
+                          <img
+                            src={enrollment.thumbnail_url}
+                            alt={enrollment.course_title}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        ) : (
+                          <BookOpen className="w-10 h-10 text-white" />
+                        )}
+                      </div>
+
+                      {/* Course Info */}
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-gray-900 mb-1">
+                          {enrollment.course_title}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                          {enrollment.course_description}
+                        </p>
+
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <span className="font-semibold text-indigo-600">
+                              {enrollment.instructor_name}
+                            </span>
+                          </span>
+                          <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+                            {enrollment.difficulty_level}
+                          </span>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between text-sm mb-2">
+                            <span className="text-gray-600">Progress</span>
+                            <span className="font-semibold text-indigo-600">
+                              {enrollment.progress}%
+                            </span>
+                          </div>
+                          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-indigo-600 rounded-full transition-all"
+                              style={{ width: `${enrollment.progress}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="ml-4">
+                      {enrollment.progress === 100 ? (
+                        <div className="flex items-center gap-2 text-green-600">
+                          <CheckCircle className="w-5 h-5" />
+                          <span className="font-semibold">Completed</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleContinueLearning(enrollment.course_id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                        >
+                          <PlayCircle className="w-4 h-4" />
+                          Continue
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

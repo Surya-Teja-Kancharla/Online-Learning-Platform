@@ -1,196 +1,170 @@
 /**
  * Course Routes
- * Defines all course-related API endpoints
+ * Defines all course-related API endpoints with RBAC
  */
 
 const express = require('express');
 const router = express.Router();
-const courseController = require('../controllers/courseController');
+const CourseController = require('../controllers/CourseController');
 const { authenticate } = require('../middleware/auth.middleware');
+const { authorizeRoles } = require('../middleware/rbac.middleware');
 const {
-  instructorOnly,
-  instructorOrAdmin,
-  adminOnly
-} = require('../middleware/rbac.middleware');
-const {
-  createCourseValidation,
-  updateCourseValidation,
-  courseIdValidation,
-  searchValidation,
-  paginationValidation,
-  categoryValidation,
-  validateFileUploads
-} = require('../middleware/courseValidation.middleware');
-const { uploadConfig } = require('../middleware/upload.middleware');
+  uploadThumbnail,
+  uploadVideo,
+  uploadDocument,
+  handleMulterError,
+} = require('../middleware/upload.middleware');
+
+/**
+ * Public Routes (No authentication required)
+ */
 
 /**
  * @route   GET /api/courses/published
- * @desc    Get all published courses (public)
+ * @desc    Get all published courses with filters
  * @access  Public
  */
-router.get(
-  '/published',
-  searchValidation,
-  courseController.getPublishedCourses
-);
+router.get('/published', CourseController.getPublishedCourses);
 
 /**
  * @route   GET /api/courses/popular
  * @desc    Get popular courses
  * @access  Public
  */
-router.get('/popular', courseController.getPopularCourses);
-
-/**
- * @route   GET /api/courses/top-rated
- * @desc    Get top rated courses
- * @access  Public
- */
-router.get('/top-rated', courseController.getTopRatedCourses);
+router.get('/popular', CourseController.getPopularCourses);
 
 /**
  * @route   GET /api/courses/search
  * @desc    Search courses
  * @access  Public
  */
-router.get('/search', searchValidation, courseController.searchCourses);
+router.get('/search', CourseController.searchCourses);
 
 /**
- * @route   GET /api/courses/categories
- * @desc    Get available categories
+ * @route   GET /api/courses/:id
+ * @desc    Get course by ID (published courses only for non-authenticated)
  * @access  Public
  */
-router.get('/categories', courseController.getCategories);
+router.get('/:id', CourseController.getCourseById);
 
 /**
- * @route   GET /api/courses/category/:category
- * @desc    Get courses by category
- * @access  Public
+ * Protected Routes (Authentication required)
  */
-router.get(
-  '/category/:category',
-  categoryValidation,
-  paginationValidation,
-  courseController.getCoursesByCategory
-);
 
 /**
- * @route   GET /api/courses/instructor/me
- * @desc    Get instructor's own courses
- * @access  Private (Instructor)
+ * @route   GET /api/courses
+ * @desc    Get all courses (instructors see their own, admin sees all)
+ * @access  Private (Instructor, Admin)
  */
 router.get(
-  '/instructor/me',
+  '/',
   authenticate,
-  instructorOnly,
-  paginationValidation,
-  courseController.getInstructorCourses
-);
-
-/**
- * @route   GET /api/courses/instructor/stats
- * @desc    Get instructor statistics
- * @access  Private (Instructor)
- */
-router.get(
-  '/instructor/stats',
-  authenticate,
-  instructorOnly,
-  courseController.getInstructorStats
+  authorizeRoles(['instructor', 'admin']),
+  CourseController.getAllCourses
 );
 
 /**
  * @route   POST /api/courses
  * @desc    Create a new course
- * @access  Private (Instructor)
+ * @access  Private (Instructor, Admin)
  */
 router.post(
   '/',
   authenticate,
-  instructorOnly,
-  uploadConfig.courseFiles,
-  validateFileUploads,
-  createCourseValidation,
-  courseController.createCourse
+  authorizeRoles(['instructor', 'admin']),
+  CourseController.createCourse
 );
 
 /**
- * @route   GET /api/courses/:id
- * @desc    Get course by ID
- * @access  Public
+ * @route   GET /api/courses/instructor/my-courses
+ * @desc    Get instructor's courses
+ * @access  Private (Instructor)
  */
 router.get(
-  '/:id',
-  courseIdValidation,
-  courseController.getCourseById
+  '/instructor/my-courses',
+  authenticate,
+  authorizeRoles(['instructor']),
+  CourseController.getMyInstructorCourses
 );
 
 /**
  * @route   PUT /api/courses/:id
- * @desc    Update course
- * @access  Private (Instructor - own courses, Admin - all courses)
+ * @desc    Update course (owner instructor or admin)
+ * @access  Private (Instructor-Owner, Admin)
  */
 router.put(
   '/:id',
   authenticate,
-  instructorOrAdmin,
-  courseIdValidation,
-  uploadConfig.courseFiles,
-  validateFileUploads,
-  updateCourseValidation,
-  courseController.updateCourse
+  authorizeRoles(['instructor', 'admin']),
+  CourseController.updateCourse
 );
 
 /**
  * @route   DELETE /api/courses/:id
- * @desc    Delete course
- * @access  Private (Instructor - own courses, Admin - all courses)
+ * @desc    Delete course (owner instructor or admin)
+ * @access  Private (Instructor-Owner, Admin)
  */
 router.delete(
   '/:id',
   authenticate,
-  instructorOrAdmin,
-  courseIdValidation,
-  courseController.deleteCourse
+  authorizeRoles(['instructor', 'admin']),
+  CourseController.deleteCourse
 );
 
 /**
- * @route   POST /api/courses/:id/publish
- * @desc    Publish course
- * @access  Private (Instructor - own courses, Admin - all courses)
+ * @route   PATCH /api/courses/:id/publish
+ * @desc    Toggle course publish status
+ * @access  Private (Instructor-Owner, Admin)
  */
-router.post(
+router.patch(
   '/:id/publish',
   authenticate,
-  instructorOrAdmin,
-  courseIdValidation,
-  courseController.publishCourse
+  authorizeRoles(['instructor', 'admin']),
+  CourseController.togglePublishStatus
 );
 
 /**
- * @route   POST /api/courses/:id/unpublish
- * @desc    Unpublish course
- * @access  Private (Instructor - own courses, Admin - all courses)
- */
-router.post(
-  '/:id/unpublish',
-  authenticate,
-  instructorOrAdmin,
-  courseIdValidation,
-  courseController.unpublishCourse
-);
-
-/**
- * @route   GET /api/courses
- * @desc    Get all courses (with filters)
- * @access  Private (Admin only)
+ * @route   GET /api/courses/:id/stats
+ * @desc    Get course statistics
+ * @access  Private (Instructor-Owner, Admin)
  */
 router.get(
-  '/',
+  '/:id/stats',
   authenticate,
-  adminOnly,
-  paginationValidation,
-  courseController.getAllCourses
+  authorizeRoles(['instructor', 'admin']),
+  CourseController.getCourseStats
+);
+
+/**
+ * File Upload Routes
+ */
+
+/**
+ * @route   POST /api/courses/:id/thumbnail
+ * @desc    Upload course thumbnail
+ * @access  Private (Instructor-Owner, Admin)
+ */
+router.post(
+  '/:id/thumbnail',
+  authenticate,
+  authorizeRoles(['instructor', 'admin']),
+  uploadThumbnail,
+  handleMulterError,
+  CourseController.uploadThumbnail
+);
+
+/**
+ * @route   POST /api/courses/:id/video
+ * @desc    Upload course intro video
+ * @access  Private (Instructor-Owner, Admin)
+ */
+router.post(
+  '/:id/video',
+  authenticate,
+  authorizeRoles(['instructor', 'admin']),
+  uploadVideo,
+  handleMulterError,
+  CourseController.uploadVideo
 );
 
 module.exports = router;

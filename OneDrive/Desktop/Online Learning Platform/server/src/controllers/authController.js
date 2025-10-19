@@ -5,7 +5,6 @@
  */
 
 const AuthService = require('../services/AuthService');
-const { successResponse, errorResponse } = require('../utils/responses');
 
 class AuthController {
   /**
@@ -17,7 +16,12 @@ class AuthController {
       const userData = req.body;
       const result = await AuthService.signup(userData);
 
-      return successResponse(res, result, 'User registered successfully', 201);
+      // FIX: Manually build the success response without the missing utility file.
+      res.status(201).json({
+          success: true,
+          message: 'User registered successfully',
+          data: result
+      });
     } catch (error) {
       next(error);
     }
@@ -32,7 +36,13 @@ class AuthController {
       const { email, password } = req.body;
       const result = await AuthService.login(email, password);
 
-      return successResponse(res, result, 'Login successful');
+      // FIX: Manually build the success response. This is the core of the fix.
+      // The 'data' object containing user and token is now correctly sent.
+      res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        data: result
+      });
     } catch (error) {
       next(error);
     }
@@ -45,7 +55,10 @@ class AuthController {
   async getProfile(req, res, next) {
     try {
       const user = req.user; // Set by auth middleware
-      return successResponse(res, { user: user.toSafeObject() });
+      res.status(200).json({
+          success: true,
+          data: { user: user.toSafeObject() }
+      });
     } catch (error) {
       next(error);
     }
@@ -59,12 +72,16 @@ class AuthController {
     try {
       const user = req.user; // Set by auth middleware
       
-      return successResponse(res, {
-        role: user.role,
-        isAdmin: user.isAdmin(),
-        isInstructor: user.isInstructor(),
-        isStudent: user.isStudent()
-      }, 'Role verified');
+      res.status(200).json({
+        success: true,
+        message: 'Role verified',
+        data: {
+          role: user.role,
+          isAdmin: user.isAdmin(),
+          isInstructor: user.isInstructor(),
+          isStudent: user.isStudent()
+        }
+      });
     } catch (error) {
       next(error);
     }
@@ -81,7 +98,7 @@ class AuthController {
 
       await AuthService.changePassword(userId, oldPassword, newPassword);
 
-      return successResponse(res, null, 'Password changed successfully');
+      res.status(200).json({ success: true, message: 'Password changed successfully' });
     } catch (error) {
       next(error);
     }
@@ -94,24 +111,13 @@ class AuthController {
   async forgotPassword(req, res, next) {
     try {
       const { email } = req.body;
-      const resetToken = await AuthService.generatePasswordResetToken(email);
-
-      // In production, send this token via email
-      // For now, return it in response (NOT SECURE - for development only)
-      if (resetToken) {
-        return successResponse(
-          res,
-          { resetToken }, // Remove this in production
-          'Password reset link sent to email'
-        );
-      }
+      await AuthService.generatePasswordResetToken(email);
 
       // Always return success to prevent email enumeration
-      return successResponse(
-        res,
-        null,
-        'If the email exists, a reset link has been sent'
-      );
+      res.status(200).json({
+        success: true,
+        message: 'If the email exists, a reset link has been sent'
+      });
     } catch (error) {
       next(error);
     }
@@ -126,7 +132,7 @@ class AuthController {
       const { token, newPassword } = req.body;
       await AuthService.resetPassword(token, newPassword);
 
-      return successResponse(res, null, 'Password reset successful');
+      res.status(200).json({ success: true, message: 'Password reset successful' });
     } catch (error) {
       next(error);
     }
@@ -139,8 +145,7 @@ class AuthController {
   async logout(req, res, next) {
     try {
       // With JWT, logout is handled client-side by removing the token
-      // You can implement token blacklisting here if needed
-      return successResponse(res, null, 'Logout successful');
+      res.status(200).json({ success: true, message: 'Logout successful' });
     } catch (error) {
       next(error);
     }
@@ -155,7 +160,11 @@ class AuthController {
       const user = req.user; // Set by auth middleware
       const newToken = AuthService.generateToken(user);
 
-      return successResponse(res, { token: newToken }, 'Token refreshed');
+      res.status(200).json({
+          success: true,
+          message: 'Token refreshed',
+          data: { token: newToken }
+      });
     } catch (error) {
       next(error);
     }
@@ -163,3 +172,4 @@ class AuthController {
 }
 
 module.exports = new AuthController();
+

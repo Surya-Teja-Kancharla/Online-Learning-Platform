@@ -112,6 +112,17 @@ class UserRepository {
   }
 
   /**
+   * Find users by role
+   * @param {string} role - User role
+   * @returns {Promise<User[]>}
+   */
+  async findByRole(role) {
+    const query = 'SELECT id, name, email, role, created_at FROM users WHERE role = $1';
+    const result = await db.query(query, [role]);
+    return result.rows.map(row => new User(row));
+  }
+
+  /**
    * Update user
    * @param {number} id - User ID
    * @param {object} updateData - Data to update
@@ -161,19 +172,25 @@ class UserRepository {
 
   /**
    * Update user password
-   * @param {number} id - User ID
-   * @param {string} password_hash - New password hash
-   * @returns {Promise<boolean>}
+   * @param {number} userId - User ID
+   * @param {string} hashedPassword - New password hash
+   * @returns {Promise<User>}
    */
-  async updatePassword(id, password_hash) {
+  async updatePassword(userId, hashedPassword) {
     const query = `
       UPDATE users 
       SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
       WHERE id = $2
+      RETURNING *
     `;
     
-    const result = await db.query(query, [password_hash, id]);
-    return result.rowCount > 0;
+    const result = await db.query(query, [hashedPassword, userId]);
+    
+    if (result.rows.length === 0) {
+      return null;
+    }
+    
+    return new User(result.rows[0]);
   }
 
   /**

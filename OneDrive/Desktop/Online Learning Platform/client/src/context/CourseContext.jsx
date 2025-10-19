@@ -41,12 +41,16 @@ export const CourseProvider = ({ children }) => {
     try {
       setLoading(true);
       const filterParams = customFilters || filters;
-      const response = await courseService.getPublishedCourses(filterParams);
-      setCourses(response.data.courses);
-      return response;
+      const coursesData = await courseService.getPublishedCourses(filterParams);
+      
+      // courseService now returns the array directly
+      setCourses(Array.isArray(coursesData) ? coursesData : []);
+      
+      return coursesData;
     } catch (error) {
+      console.error('Load courses error:', error);
       toast.error('Failed to load courses');
-      console.error(error);
+      setCourses([]); // Set empty array on error
       return null;
     } finally {
       setLoading(false);
@@ -59,9 +63,10 @@ export const CourseProvider = ({ children }) => {
     
     try {
       const data = await enrollmentService.getMyEnrollments();
-      setEnrollments(data);
+      setEnrollments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to load enrollments:', error);
+      setEnrollments([]);
     }
   };
 
@@ -111,11 +116,13 @@ export const CourseProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await courseService.searchCourses(query, filters);
-      setCourses(response.data.courses);
+      const coursesData = response?.data?.courses || response?.courses || response || [];
+      setCourses(Array.isArray(coursesData) ? coursesData : []);
       return response;
     } catch (error) {
+      console.error('Search error:', error);
       toast.error('Search failed');
-      console.error(error);
+      setCourses([]);
       return null;
     } finally {
       setLoading(false);
@@ -126,7 +133,7 @@ export const CourseProvider = ({ children }) => {
   const getPopularCourses = async (limit = 10) => {
     try {
       const data = await courseService.getPopularCourses(limit);
-      return data;
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error('Failed to get popular courses:', error);
       return [];
@@ -136,6 +143,7 @@ export const CourseProvider = ({ children }) => {
   // Load courses on mount and filter changes
   useEffect(() => {
     loadCourses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.category, filters.difficulty, filters.page]);
 
   // Load enrollments when user logs in
@@ -143,7 +151,8 @@ export const CourseProvider = ({ children }) => {
     if (user && user.role === 'student') {
       loadEnrollments();
     }
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role]);
 
   const value = {
     courses,

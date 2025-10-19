@@ -5,7 +5,6 @@
  */
 
 const CourseService = require('../services/CourseService');
-const { successResponse, paginatedResponse } = require('../utils/responses');
 
 class CourseController {
   /**
@@ -16,84 +15,72 @@ class CourseController {
     try {
       const courseData = req.body;
       const instructorId = req.user.id;
-      const files = req.files || {};
-      
-      const course = await CourseService.createCourse(
-        courseData,
-        instructorId,
-        files
-      );
-      
-      return successResponse(
-        res,
-        { course: course.toSafeObject() },
-        'Course created successfully',
-        201
-      );
+
+      const course = await CourseService.createCourse(courseData, instructorId);
+
+      res.status(201).json({
+        success: true,
+        message: 'Course created successfully',
+        data: { course },
+      });
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Get all courses
+   * Get all courses (with filters)
    * GET /api/courses
    */
   async getAllCourses(req, res, next) {
     try {
       const filters = {
+        category: req.query.category,
+        difficulty_level: req.query.difficulty,
+        search: req.query.search,
+        min_price: req.query.minPrice,
+        max_price: req.query.maxPrice,
+        sort_by: req.query.sortBy,
         page: req.query.page,
         limit: req.query.limit,
-        category: req.query.category,
-        difficulty: req.query.difficulty,
-        search: req.query.search,
-        minPrice: req.query.minPrice,
-        maxPrice: req.query.maxPrice,
-        sortBy: req.query.sortBy,
-        sortOrder: req.query.sortOrder
       };
-      
+
       const result = await CourseService.getAllCourses(filters);
-      
-      return paginatedResponse(
-        res,
-        result.courses.map(c => c.toSafeObject()),
-        result.pagination.page,
-        result.pagination.limit,
-        result.pagination.total
-      );
+
+      res.status(200).json({
+        success: true,
+        data: result.courses,
+        pagination: result.pagination,
+      });
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Get published courses
+   * Get published courses only
    * GET /api/courses/published
    */
   async getPublishedCourses(req, res, next) {
     try {
       const filters = {
+        category: req.query.category,
+        difficulty_level: req.query.difficulty,
+        search: req.query.search,
+        min_price: req.query.minPrice,
+        max_price: req.query.maxPrice,
+        sort_by: req.query.sortBy,
         page: req.query.page,
         limit: req.query.limit,
-        category: req.query.category,
-        difficulty: req.query.difficulty,
-        search: req.query.search,
-        minPrice: req.query.minPrice,
-        maxPrice: req.query.maxPrice,
-        sortBy: req.query.sortBy,
-        sortOrder: req.query.sortOrder
       };
-      
+
       const result = await CourseService.getPublishedCourses(filters);
-      
-      return paginatedResponse(
-        res,
-        result.courses.map(c => c.toSummary()),
-        result.pagination.page,
-        result.pagination.limit,
-        result.pagination.total
-      );
+
+      res.status(200).json({
+        success: true,
+        data: result.courses,
+        pagination: result.pagination,
+      });
     } catch (error) {
       next(error);
     }
@@ -105,54 +92,13 @@ class CourseController {
    */
   async getCourseById(req, res, next) {
     try {
-      const { id } = req.params;
-      const course = await CourseService.getCourseById(id);
-      
-      return successResponse(res, { course: course.toSafeObject() });
-    } catch (error) {
-      next(error);
-    }
-  }
+      const courseId = req.params.id;
+      const course = await CourseService.getCourseById(courseId);
 
-  /**
-   * Get instructor's courses
-   * GET /api/courses/instructor/me
-   */
-  async getInstructorCourses(req, res, next) {
-    try {
-      const instructorId = req.user.id;
-      const filters = {
-        page: req.query.page,
-        limit: req.query.limit,
-        is_published: req.query.is_published,
-        sortBy: req.query.sortBy,
-        sortOrder: req.query.sortOrder
-      };
-      
-      const courses = await CourseService.getCoursesByInstructor(
-        instructorId,
-        filters
-      );
-      
-      return successResponse(
-        res,
-        { courses: courses.map(c => c.toSafeObject()) }
-      );
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Get instructor statistics
-   * GET /api/courses/instructor/stats
-   */
-  async getInstructorStats(req, res, next) {
-    try {
-      const instructorId = req.user.id;
-      const stats = await CourseService.getInstructorStats(instructorId);
-      
-      return successResponse(res, { stats });
+      res.status(200).json({
+        success: true,
+        data: { course },
+      });
     } catch (error) {
       next(error);
     }
@@ -164,25 +110,23 @@ class CourseController {
    */
   async updateCourse(req, res, next) {
     try {
-      const { id } = req.params;
-      const updateData = req.body;
+      const courseId = req.params.id;
+      const courseData = req.body;
       const userId = req.user.id;
       const userRole = req.user.role;
-      const files = req.files || {};
-      
+
       const course = await CourseService.updateCourse(
-        id,
-        updateData,
+        courseId,
+        courseData,
         userId,
-        userRole,
-        files
+        userRole
       );
-      
-      return successResponse(
-        res,
-        { course: course.toSafeObject() },
-        'Course updated successfully'
-      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Course updated successfully',
+        data: { course },
+      });
     } catch (error) {
       next(error);
     }
@@ -194,92 +138,90 @@ class CourseController {
    */
   async deleteCourse(req, res, next) {
     try {
-      const { id } = req.params;
+      const courseId = req.params.id;
       const userId = req.user.id;
       const userRole = req.user.role;
-      
-      await CourseService.deleteCourse(id, userId, userRole);
-      
-      return successResponse(res, null, 'Course deleted successfully');
+
+      await CourseService.deleteCourse(courseId, userId, userRole);
+
+      res.status(200).json({
+        success: true,
+        message: 'Course deleted successfully',
+      });
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Publish course
-   * POST /api/courses/:id/publish
+   * Toggle course publish status
+   * PATCH /api/courses/:id/publish
    */
-  async publishCourse(req, res, next) {
+  async togglePublishStatus(req, res, next) {
     try {
-      const { id } = req.params;
+      const courseId = req.params.id;
       const userId = req.user.id;
       const userRole = req.user.role;
-      
-      const course = await CourseService.publishCourse(id, userId, userRole);
-      
-      return successResponse(
-        res,
-        { course: course.toSafeObject() },
-        'Course published successfully'
+
+      const course = await CourseService.togglePublishStatus(
+        courseId,
+        userId,
+        userRole
       );
+
+      res.status(200).json({
+        success: true,
+        message: `Course ${course.is_published ? 'published' : 'unpublished'} successfully`,
+        data: { course },
+      });
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Unpublish course
-   * POST /api/courses/:id/unpublish
+   * Get instructor's courses
+   * GET /api/courses/instructor/my-courses
    */
-  async unpublishCourse(req, res, next) {
+  async getMyInstructorCourses(req, res, next) {
     try {
-      const { id } = req.params;
-      const userId = req.user.id;
-      const userRole = req.user.role;
-      
-      const course = await CourseService.unpublishCourse(id, userId, userRole);
-      
-      return successResponse(
-        res,
-        { course: course.toSafeObject() },
-        'Course unpublished successfully'
-      );
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Search courses
-   * GET /api/courses/search
-   */
-  async searchCourses(req, res, next) {
-    try {
-      const { q } = req.query;
-      
-      if (!q) {
-        return successResponse(res, { courses: [] });
-      }
-      
+      const instructorId = req.user.id;
       const filters = {
+        category: req.query.category,
+        difficulty_level: req.query.difficulty,
+        is_published: req.query.published,
         page: req.query.page,
         limit: req.query.limit,
-        category: req.query.category,
-        difficulty: req.query.difficulty,
-        minPrice: req.query.minPrice,
-        maxPrice: req.query.maxPrice
       };
-      
-      const result = await CourseService.searchCourses(q, filters);
-      
-      return paginatedResponse(
-        res,
-        result.courses.map(c => c.toSummary()),
-        result.pagination.page,
-        result.pagination.limit,
-        result.pagination.total
-      );
+
+      const result = await CourseService.getInstructorCourses(instructorId, filters);
+
+      res.status(200).json({
+        success: true,
+        data: result.courses,
+        pagination: result.pagination,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get course statistics
+   * GET /api/courses/:id/stats
+   */
+  async getCourseStats(req, res, next) {
+    try {
+      const courseId = req.params.id;
+      const userId = req.user.id;
+      const userRole = req.user.role;
+
+      const stats = await CourseService.getCourseStats(courseId, userId, userRole);
+
+      res.status(200).json({
+        success: true,
+        data: { stats },
+      });
     } catch (error) {
       next(error);
     }
@@ -293,74 +235,117 @@ class CourseController {
     try {
       const limit = parseInt(req.query.limit) || 10;
       const courses = await CourseService.getPopularCourses(limit);
-      
-      return successResponse(
-        res,
-        { courses: courses.map(c => c.toSummary()) }
-      );
+
+      res.status(200).json({
+        success: true,
+        data: { courses },
+      });
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Get top rated courses
-   * GET /api/courses/top-rated
+   * Search courses
+   * GET /api/courses/search
    */
-  async getTopRatedCourses(req, res, next) {
+  async searchCourses(req, res, next) {
     try {
-      const limit = parseInt(req.query.limit) || 10;
-      const courses = await CourseService.getTopRatedCourses(limit);
-      
-      return successResponse(
-        res,
-        { courses: courses.map(c => c.toSummary()) }
-      );
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Get courses by category
-   * GET /api/courses/category/:category
-   */
-  async getCoursesByCategory(req, res, next) {
-    try {
-      const { category } = req.params;
+      const searchTerm = req.query.q || req.query.search;
       const filters = {
+        category: req.query.category,
+        difficulty_level: req.query.difficulty,
+        min_price: req.query.minPrice,
+        max_price: req.query.maxPrice,
         page: req.query.page,
         limit: req.query.limit,
-        difficulty: req.query.difficulty,
-        sortBy: req.query.sortBy,
-        sortOrder: req.query.sortOrder
       };
-      
-      const result = await CourseService.getCoursesByCategory(
-        category,
-        filters
-      );
-      
-      return paginatedResponse(
-        res,
-        result.courses.map(c => c.toSummary()),
-        result.pagination.page,
-        result.pagination.limit,
-        result.pagination.total
-      );
+
+      const result = await CourseService.searchCourses(searchTerm, filters);
+
+      res.status(200).json({
+        success: true,
+        data: result.courses,
+        pagination: result.pagination,
+      });
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Get available categories
-   * GET /api/courses/categories
+   * Upload course thumbnail
+   * POST /api/courses/:id/thumbnail
    */
-  async getCategories(req, res, next) {
+  async uploadThumbnail(req, res, next) {
     try {
-      const categories = await CourseService.getCategories();
-      return successResponse(res, { categories });
+      const courseId = req.params.id;
+      const userId = req.user.id;
+      const userRole = req.user.role;
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'No file uploaded',
+        });
+      }
+
+      // Validate file
+      await CourseService.validateFileUpload(req.file, 'image');
+
+      // Update course with thumbnail URL
+      const thumbnail_url = `/uploads/thumbnails/${req.file.filename}`;
+      const course = await CourseService.updateCourse(
+        courseId,
+        { thumbnail_url },
+        userId,
+        userRole
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Thumbnail uploaded successfully',
+        data: { course },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Upload course video
+   * POST /api/courses/:id/video
+   */
+  async uploadVideo(req, res, next) {
+    try {
+      const courseId = req.params.id;
+      const userId = req.user.id;
+      const userRole = req.user.role;
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'No file uploaded',
+        });
+      }
+
+      // Validate file
+      await CourseService.validateFileUpload(req.file, 'video');
+
+      // Update course with video URL
+      const video_url = `/uploads/videos/${req.file.filename}`;
+      const course = await CourseService.updateCourse(
+        courseId,
+        { video_url },
+        userId,
+        userRole
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Video uploaded successfully',
+        data: { course },
+      });
     } catch (error) {
       next(error);
     }

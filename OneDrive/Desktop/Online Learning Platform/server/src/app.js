@@ -18,6 +18,7 @@ const authRoutes = require('./routes/authRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const quizRoutes = require('./routes/quizRoutes');
 const lessonRoutes = require('./routes/lessonRoutes');
+const enrollmentRoutes = require('./routes/enrollmentRoutes');
 
 // Create Express app
 const app = express();
@@ -79,6 +80,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/lessons', lessonRoutes);
+app.use('/api/enrollments', enrollmentRoutes);
 
 // API documentation endpoint
 app.get('/api', (req, res) => {
@@ -91,6 +93,7 @@ app.get('/api', (req, res) => {
       courses: '/api/courses',
       quizzes: '/api/quizzes',
       lessons: '/api/lessons',
+      enrollments: '/api/enrollments',
       health: '/health'
     },
     documentation: '/api/docs'
@@ -102,5 +105,11 @@ app.use(notFoundHandler);
 
 // Global error handler - must be last
 app.use(errorHandler);
+
+const courseContentRoutes = require('./routes/courseContentRoutes');
+app.use('/api/course-content', courseContentRoutes);
+
+const forumRoutes = require('./routes/forumRoutes');
+app.use('/api/forum', forumRoutes);
 
 module.exports = app;

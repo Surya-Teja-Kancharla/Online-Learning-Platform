@@ -1,201 +1,232 @@
 /**
- * Form Validation Utilities
- * Reusable validation functions for forms
+ * Validation Utilities
+ * Form validation helpers and rules
  */
+
+// Email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Password validation
+const PASSWORD_MIN_LENGTH = 6;
+const PASSWORD_STRONG_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
 
 /**
  * Validate email format
- * @param {string} email - Email to validate
- * @returns {string|null} Error message or null if valid
  */
 export const validateEmail = (email) => {
   if (!email) {
     return 'Email is required';
   }
-  
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return 'Invalid email format';
+  if (!EMAIL_REGEX.test(email)) {
+    return 'Please enter a valid email address';
   }
-  
   return null;
 };
 
 /**
- * Validate password strength
- * @param {string} password - Password to validate
- * @returns {string|null} Error message or null if valid
+ * Validate password
  */
 export const validatePassword = (password) => {
   if (!password) {
     return 'Password is required';
   }
-  
-  if (password.length < 6) {
-    return 'Password must be at least 6 characters';
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    return `Password must be at least ${PASSWORD_MIN_LENGTH} characters`;
   }
-  
-  if (!/(?=.*[a-z])/.test(password)) {
-    return 'Password must contain at least one lowercase letter';
-  }
-  
-  if (!/(?=.*[A-Z])/.test(password)) {
-    return 'Password must contain at least one uppercase letter';
-  }
-  
-  if (!/(?=.*\d)/.test(password)) {
-    return 'Password must contain at least one number';
-  }
-  
   return null;
 };
 
 /**
  * Validate name
- * @param {string} name - Name to validate
- * @returns {string|null} Error message or null if valid
  */
 export const validateName = (name) => {
   if (!name) {
     return 'Name is required';
   }
-  
   if (name.trim().length < 2) {
     return 'Name must be at least 2 characters';
   }
-  
-  if (name.length > 100) {
-    return 'Name must not exceed 100 characters';
+  if (name.trim().length > 50) {
+    return 'Name must be less than 50 characters';
   }
-  
   return null;
 };
 
 /**
- * Validate password confirmation
- * @param {string} password - Original password
- * @param {string} confirmPassword - Confirmation password
- * @returns {string|null} Error message or null if valid
+ * Validate confirm password
  */
-export const validatePasswordMatch = (password, confirmPassword) => {
+export const validateConfirmPassword = (password, confirmPassword) => {
   if (!confirmPassword) {
     return 'Please confirm your password';
   }
-  
   if (password !== confirmPassword) {
     return 'Passwords do not match';
   }
-  
   return null;
 };
 
 /**
- * Validate role
- * @param {string} role - Role to validate
- * @returns {string|null} Error message or null if valid
- */
-export const validateRole = (role) => {
-  const validRoles = ['student', 'instructor', 'admin'];
-  
-  if (!role) {
-    return 'Role is required';
-  }
-  
-  if (!validRoles.includes(role)) {
-    return 'Invalid role selected';
-  }
-  
-  return null;
-};
-
-/**
- * Get password strength level
- * @param {string} password - Password to check
- * @returns {object} Strength level and label
+ * Get password strength
  */
 export const getPasswordStrength = (password) => {
   if (!password) {
-    return { level: 0, label: 'No password', color: 'gray' };
+    return { level: 0, label: 'None', color: 'gray' };
   }
-  
+
   let strength = 0;
-  
+
   // Length check
-  if (password.length >= 6) strength++;
-  if (password.length >= 10) strength++;
-  
-  // Character variety checks
-  if (/[a-z]/.test(password)) strength++;
-  if (/[A-Z]/.test(password)) strength++;
+  if (password.length >= 8) strength++;
+  if (password.length >= 12) strength++;
+
+  // Character variety
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
   if (/\d/.test(password)) strength++;
-  if (/[^a-zA-Z\d]/.test(password)) strength++;
-  
-  // Map strength to level
-  if (strength <= 2) {
-    return { level: 1, label: 'Weak', color: 'red' };
-  } else if (strength <= 4) {
-    return { level: 2, label: 'Medium', color: 'yellow' };
-  } else {
-    return { level: 3, label: 'Strong', color: 'green' };
-  }
+  if (/[@$!%*?&#]/.test(password)) strength++;
+
+  // Normalize to 0-3 scale
+  const level = Math.min(3, Math.floor(strength / 1.66));
+
+  const labels = ['Weak', 'Fair', 'Good', 'Strong'];
+  const colors = ['red', 'orange', 'yellow', 'green'];
+
+  return {
+    level,
+    label: labels[level] || 'Weak',
+    color: colors[level] || 'red',
+  };
 };
 
 /**
- * Validate entire signup form
- * @param {object} formData - Form data to validate
- * @returns {object} Errors object
+ * Validate signup form
  */
 export const validateSignupForm = (formData) => {
   const errors = {};
-  
+
+  // Validate name
   const nameError = validateName(formData.name);
   if (nameError) errors.name = nameError;
-  
+
+  // Validate email
   const emailError = validateEmail(formData.email);
   if (emailError) errors.email = emailError;
-  
+
+  // Validate password
   const passwordError = validatePassword(formData.password);
   if (passwordError) errors.password = passwordError;
-  
-  if (formData.confirmPassword !== undefined) {
-    const matchError = validatePasswordMatch(
-      formData.password,
-      formData.confirmPassword
-    );
-    if (matchError) errors.confirmPassword = matchError;
+
+  // Validate confirm password
+  const confirmPasswordError = validateConfirmPassword(
+    formData.password,
+    formData.confirmPassword
+  );
+  if (confirmPasswordError) errors.confirmPassword = confirmPasswordError;
+
+  // Validate role
+  if (!formData.role) {
+    errors.role = 'Please select a role';
   }
-  
-  if (formData.role) {
-    const roleError = validateRole(formData.role);
-    if (roleError) errors.role = roleError;
-  }
-  
+
   return errors;
 };
 
 /**
- * Validate entire login form
- * @param {object} formData - Form data to validate
- * @returns {object} Errors object
+ * Validate login form
  */
 export const validateLoginForm = (formData) => {
   const errors = {};
-  
+
+  // Validate email
   const emailError = validateEmail(formData.email);
   if (emailError) errors.email = emailError;
-  
+
+  // Validate password
   if (!formData.password) {
     errors.password = 'Password is required';
   }
-  
+
   return errors;
 };
 
 /**
- * Check if errors object is empty
- * @param {object} errors - Errors object
- * @returns {boolean}
+ * Check if errors object has any errors
  */
 export const hasErrors = (errors) => {
   return Object.keys(errors).length > 0;
+};
+
+/**
+ * Validate URL
+ */
+export const validateURL = (url) => {
+  if (!url) return null;
+  try {
+    new URL(url);
+    return null;
+  } catch {
+    return 'Please enter a valid URL';
+  }
+};
+
+/**
+ * Validate phone number (basic)
+ */
+export const validatePhone = (phone) => {
+  if (!phone) {
+    return 'Phone number is required';
+  }
+  const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+  if (!phoneRegex.test(phone)) {
+    return 'Please enter a valid phone number';
+  }
+  if (phone.replace(/\D/g, '').length < 10) {
+    return 'Phone number must be at least 10 digits';
+  }
+  return null;
+};
+
+/**
+ * Validate number range
+ */
+export const validateNumberRange = (value, min, max) => {
+  const num = parseFloat(value);
+  if (isNaN(num)) {
+    return 'Please enter a valid number';
+  }
+  if (min !== undefined && num < min) {
+    return `Value must be at least ${min}`;
+  }
+  if (max !== undefined && num > max) {
+    return `Value must be at most ${max}`;
+  }
+  return null;
+};
+
+/**
+ * Sanitize input (basic XSS prevention)
+ */
+export const sanitizeInput = (input) => {
+  if (typeof input !== 'string') return input;
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+};
+
+export default {
+  validateEmail,
+  validatePassword,
+  validateName,
+  validateConfirmPassword,
+  getPasswordStrength,
+  validateSignupForm,
+  validateLoginForm,
+  hasErrors,
+  validateURL,
+  validatePhone,
+  validateNumberRange,
+  sanitizeInput,
 };

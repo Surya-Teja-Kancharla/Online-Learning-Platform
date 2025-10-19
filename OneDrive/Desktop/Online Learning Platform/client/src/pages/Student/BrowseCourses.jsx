@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCourses } from '../../context/CourseContext';
-import BrowseCourseCard from '../../components/course/BrowseCourseCard';
+import BrowseCourseCard from './BrowseCourseCard';
 import CourseFilters from '../../components/course/CourseFilters';
 import Button from '../../components/common/Button';
 
@@ -18,9 +18,10 @@ const BrowseCourses = () => {
 
   const [showFilters, setShowFilters] = useState(true);
 
-  useEffect(() => {
-    loadCourses();
-  }, []);
+  // Don't load on mount - CourseContext handles initial load
+  // useEffect(() => {
+  //   loadCourses();
+  // }, [loadCourses]);
 
   const handleFilterChange = (newFilters) => {
     updateFilters(newFilters);
@@ -31,6 +32,10 @@ const BrowseCourses = () => {
     resetFilters();
     loadCourses();
   };
+
+  // Safe access to courses array
+  const coursesList = courses || [];
+  const coursesCount = coursesList.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -107,8 +112,8 @@ const BrowseCourses = () => {
                   'Loading courses...'
                 ) : (
                   <>
-                    Showing <span className="font-semibold">{courses.length}</span>{' '}
-                    courses
+                    Showing <span className="font-semibold">{coursesCount}</span>{' '}
+                    {coursesCount === 1 ? 'course' : 'courses'}
                   </>
                 )}
               </p>
@@ -119,7 +124,7 @@ const BrowseCourses = () => {
               <div className="flex justify-center items-center py-20">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
-            ) : courses.length === 0 ? (
+            ) : coursesCount === 0 ? (
               /* Empty State */
               <div className="bg-white rounded-lg shadow p-12 text-center">
                 <svg
@@ -148,7 +153,7 @@ const BrowseCourses = () => {
             ) : (
               /* Courses Grid */
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {courses.map((course) => (
+                {coursesList.map((course) => (
                   <BrowseCourseCard key={course.id} course={course} />
                 ))}
               </div>

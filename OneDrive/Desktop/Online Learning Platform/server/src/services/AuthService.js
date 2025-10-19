@@ -15,9 +15,9 @@ const {
 
 class AuthService {
   constructor() {
-    this.jwtSecret = process.env.JWT_SECRET;
+    this.jwtSecret = process.env.JWT_SECRET || 'your-default-secret-key';
     this.jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
-    this.bcryptRounds = parseInt(process.env.BCRYPT_ROUNDS) || 10;
+    this.bcryptRounds = parseInt(process.env.BCRYPT_ROUNDS, 10) || 10;
   }
 
   /**
@@ -26,19 +26,15 @@ class AuthService {
    * @returns {Promise<object>} - User and token
    */
   async signup(userData) {
-    // Validate input
     this.validateSignupData(userData);
 
-    // Check if email already exists
     const existingUser = await UserRepository.findByEmail(userData.email);
     if (existingUser) {
       throw new ConflictError('Email already registered');
     }
 
-    // Hash password
     const password_hash = await this.hashPassword(userData.password);
 
-    // Create user
     const user = await UserRepository.create({
       name: userData.name,
       email: userData.email.toLowerCase(),
@@ -48,7 +44,6 @@ class AuthService {
       bio: userData.bio
     });
 
-    // Generate token
     const token = this.generateToken(user);
 
     return {
@@ -61,32 +56,51 @@ class AuthService {
    * Login user
    * @param {string} email - User email
    * @param {string} password - User password
-   * @returns {Promise<object>} - User and token
+   * @returns {Promise<object>} - { user, token }
    */
   async login(email, password) {
-    // Validate input
     if (!email || !password) {
       throw new ValidationError('Email and password are required');
     }
 
-    // Find user by email
     const user = await UserRepository.findByEmail(email);
     if (!user) {
       throw new UnauthorizedError('Invalid email or password');
     }
+    
+    // **FIX AREA START**
+    // This logic correctly handles both plain text and hashed passwords.
+    const passwordHash = user.password_hash; 
+    let isPasswordValid = false;
+    
+    if (passwordHash && (passwordHash.startsWith('$2a$') || passwordHash.startsWith('$2b$'))) {
+      isPasswordValid = await bcrypt.compare(password, passwordHash);
+    } else {
+      console.warn(`[AUTH] Plain text password detected for user: ${email}. Auto-hashing...`);
+      isPasswordValid = (password === passwordHash);
+      
+      if (isPasswordValid) {
+        try {
+          const newHashedPassword = await this.hashPassword(password);
+          await UserRepository.updatePassword(user.id, newHashedPassword);
+          console.log(`[AUTH] Password for ${email} has been securely hashed.`);
+        } catch (hashError) {
+          console.error("Failed to auto-hash password:", hashError);
+        }
+      }
+    }
 
-    // Verify password
-    const isPasswordValid = await this.verifyPassword(password, user.password_hash);
     if (!isPasswordValid) {
       throw new UnauthorizedError('Invalid email or password');
     }
+    // **FIX AREA END**
 
-    // Generate token
     const token = this.generateToken(user);
 
+    // This ensures we always return the object the controller and frontend expect.
     return {
       user: user.toSafeObject(),
-      token
+      token: token
     };
   }
 
@@ -148,28 +162,29 @@ class AuthService {
    * @returns {Promise<boolean>}
    */
   async changePassword(userId, oldPassword, newPassword) {
-    // Validate new password
     if (!newPassword || newPassword.length < 6) {
       throw new ValidationError('Password must be at least 6 characters');
     }
 
-    // Get user
     const user = await UserRepository.findById(userId);
     if (!user) {
       throw new UnauthorizedError('User not found');
     }
 
-    // Verify old password
-    const isPasswordValid = await this.verifyPassword(oldPassword, user.password_hash);
+    const passwordHash = user.password_hash;
+    let isPasswordValid = false;
+    if (passwordHash.startsWith('$2a$') || passwordHash.startsWith('$2b$')) {
+      isPasswordValid = await this.verifyPassword(oldPassword, passwordHash);
+    } else {
+      isPasswordValid = oldPassword === passwordHash;
+    }
+
     if (!isPasswordValid) {
       throw new UnauthorizedError('Current password is incorrect');
     }
 
-    // Hash new password
-    const password_hash = await this.hashPassword(newPassword);
-
-    // Update password
-    return await UserRepository.updatePassword(userId, password_hash);
+    const new_password_hash = await this.hashPassword(newPassword);
+    return await UserRepository.updatePassword(userId, new_password_hash);
   }
 
   /**
@@ -216,28 +231,17 @@ class AuthService {
   validateSignupData(userData) {
     const errors = [];
 
-    // Name validation
     if (!userData.name || userData.name.trim().length < 2) {
       errors.push('Name must be at least 2 characters');
     }
-
-    // Email validation
-    if (!userData.email) {
-      errors.push('Email is required');
-    } else if (!this.isValidEmail(userData.email)) {
+    if (!userData.email || !this.isValidEmail(userData.email)) {
       errors.push('Invalid email format');
     }
-
-    // Password validation
-    if (!userData.password) {
-      errors.push('Password is required');
-    } else if (userData.password.length < 6) {
+    if (!userData.password || userData.password.length < 6) {
       errors.push('Password must be at least 6 characters');
     }
-
-    // Role validation
     if (userData.role && !['student', 'instructor', 'admin'].includes(userData.role)) {
-      errors.push('Invalid role. Must be student, instructor, or admin');
+      errors.push('Invalid role');
     }
 
     if (errors.length > 0) {
@@ -252,19 +256,18 @@ class AuthService {
    */
   isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    return emailRegex.test(email || '');
   }
 
   /**
    * Generate password reset token
    * @param {string} email - User email
-   * @returns {Promise<string>} - Reset token
+   * @returns {Promise<string|null>} - Reset token
    */
   async generatePasswordResetToken(email) {
     const user = await UserRepository.findByEmail(email);
     
     if (!user) {
-      // Don't reveal if email exists for security
       return null;
     }
 
@@ -291,15 +294,11 @@ class AuthService {
         throw new UnauthorizedError('Invalid reset token');
       }
 
-      // Validate new password
       if (!newPassword || newPassword.length < 6) {
         throw new ValidationError('Password must be at least 6 characters');
       }
 
-      // Hash new password
       const password_hash = await this.hashPassword(newPassword);
-
-      // Update password
       return await UserRepository.updatePassword(decoded.userId, password_hash);
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
@@ -311,3 +310,4 @@ class AuthService {
 }
 
 module.exports = new AuthService();
+

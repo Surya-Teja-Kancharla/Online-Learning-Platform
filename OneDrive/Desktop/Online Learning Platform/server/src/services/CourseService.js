@@ -1,401 +1,296 @@
 /**
  * CourseService - Business Logic Layer
- * Handles course logic, validation, and file uploads
+ * Handles course-related business logic and validation
  * Implements Single Responsibility Principle
  */
 
 const CourseRepository = require('../repositories/CourseRepository');
-const { ValidationError, NotFoundError, ForbiddenError } = require('../utils/errors');
-const { getFileUrl, deleteFile } = require('../middleware/upload.middleware');
+const {
+  ValidationError,
+  UnauthorizedError,
+  NotFoundError,
+  ForbiddenError,
+} = require('../utils/errors');
 
 class CourseService {
   /**
    * Create a new course
-   * @param {object} courseData - Course data
-   * @param {number} instructorId - Instructor ID
-   * @param {object} files - Uploaded files
-   * @returns {Promise<Course>}
    */
-  async createCourse(courseData, instructorId, files = {}) {
+  async createCourse(courseData, instructorId) {
     // Validate course data
     this.validateCourseData(courseData);
-    
-    // Prepare course data
-    const newCourseData = {
+
+    // Create course
+    const course = await CourseRepository.create({
       ...courseData,
       instructor_id: instructorId,
-      price: parseFloat(courseData.price) || 0,
-      duration: parseInt(courseData.duration) || null
-    };
-    
-    // Handle file uploads
-    if (files.video) {
-      newCourseData.video_url = getFileUrl(files.video[0].path);
-    }
-    
-    if (files.thumbnail) {
-      newCourseData.thumbnail_url = getFileUrl(files.thumbnail[0].path);
-    }
-    
-    // Create course
-    const course = await CourseRepository.create(newCourseData);
+    });
+
     return course;
   }
 
   /**
    * Get course by ID
-   * @param {number} id - Course ID
-   * @returns {Promise<Course>}
    */
-  async getCourseById(id) {
-    const course = await CourseRepository.findById(id);
-    
+  async getCourseById(courseId) {
+    const course = await CourseRepository.findById(courseId);
+
     if (!course) {
       throw new NotFoundError('Course not found');
     }
-    
+
     return course;
   }
 
   /**
    * Get all courses with filters
-   * @param {object} filters - Filter options
-   * @returns {Promise<object>} - Courses and metadata
    */
   async getAllCourses(filters = {}) {
-    // Pagination
-    const page = parseInt(filters.page) || 1;
-    const limit = parseInt(filters.limit) || 10;
-    const offset = (page - 1) * limit;
-    
-    // Get courses
-    const courses = await CourseRepository.findAll({
-      ...filters,
-      limit,
-      offset
-    });
-    
-    // Get total count
-    const total = await CourseRepository.count(filters);
-    const totalPages = Math.ceil(total / limit);
-    
-    return {
-      courses,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1
-      }
-    };
+    return await CourseRepository.findAll(filters);
   }
 
   /**
    * Get published courses
-   * @param {object} filters - Filter options
-   * @returns {Promise<object>} - Courses and metadata
    */
   async getPublishedCourses(filters = {}) {
-    return this.getAllCourses({ ...filters, is_published: true });
-  }
-
-  /**
-   * Get courses by instructor
-   * @param {number} instructorId - Instructor ID
-   * @param {object} filters - Filter options
-   * @returns {Promise<Course[]>}
-   */
-  async getCoursesByInstructor(instructorId, filters = {}) {
-    return await CourseRepository.findAll({
-      ...filters,
-      instructor_id: instructorId
-    });
+    return await CourseRepository.findAll({ ...filters, is_published: true });
   }
 
   /**
    * Update course
-   * @param {number} id - Course ID
-   * @param {object} updateData - Data to update
-   * @param {number} userId - User ID making the update
-   * @param {string} userRole - User role
-   * @param {object} files - Uploaded files
-   * @returns {Promise<Course>}
    */
-  async updateCourse(id, updateData, userId, userRole, files = {}) {
+  async updateCourse(courseId, courseData, userId, userRole) {
     // Get existing course
-    const course = await this.getCourseById(id);
-    
-    // Check ownership
-    this.checkOwnership(course, userId, userRole);
-    
+    const course = await this.getCourseById(courseId);
+
+    // Check permissions
+    this.checkUpdatePermission(course, userId, userRole);
+
     // Validate update data
-    if (updateData.title || updateData.description || updateData.category || updateData.difficulty) {
-      this.validateCourseData({ ...course, ...updateData });
+    if (courseData.title || courseData.description || courseData.category) {
+      this.validateCourseData({ ...course, ...courseData }, true);
     }
-    
-    // Prepare update data
-    const updatedData = { ...updateData };
-    
-    // Handle file uploads
-    if (files.video) {
-      // Delete old video if exists
-      if (course.video_url) {
-        await deleteFile(course.video_url);
-      }
-      updatedData.video_url = getFileUrl(files.video[0].path);
-    }
-    
-    if (files.thumbnail) {
-      // Delete old thumbnail if exists
-      if (course.thumbnail_url) {
-        await deleteFile(course.thumbnail_url);
-      }
-      updatedData.thumbnail_url = getFileUrl(files.thumbnail[0].path);
-    }
-    
+
     // Update course
-    const updatedCourse = await CourseRepository.update(id, updatedData);
+    const updatedCourse = await CourseRepository.update(courseId, courseData);
+
     return updatedCourse;
   }
 
   /**
    * Delete course
-   * @param {number} id - Course ID
-   * @param {number} userId - User ID making the deletion
-   * @param {string} userRole - User role
-   * @returns {Promise<boolean>}
    */
-  async deleteCourse(id, userId, userRole) {
-    // Get course
-    const course = await this.getCourseById(id);
-    
-    // Check ownership
-    this.checkOwnership(course, userId, userRole);
-    
-    // Delete associated files
-    if (course.video_url) {
-      await deleteFile(course.video_url);
-    }
-    
-    if (course.thumbnail_url) {
-      await deleteFile(course.thumbnail_url);
-    }
-    
+  async deleteCourse(courseId, userId, userRole) {
+    // Get existing course
+    const course = await this.getCourseById(courseId);
+
+    // Check permissions
+    this.checkDeletePermission(course, userId, userRole);
+
     // Delete course
-    const deleted = await CourseRepository.delete(id);
-    return deleted;
+    await CourseRepository.delete(courseId);
+
+    return { message: 'Course deleted successfully' };
   }
 
   /**
-   * Publish course
-   * @param {number} id - Course ID
-   * @param {number} userId - User ID
-   * @param {string} userRole - User role
-   * @returns {Promise<Course>}
+   * Publish/Unpublish course
    */
-  async publishCourse(id, userId, userRole) {
-    const course = await this.getCourseById(id);
-    this.checkOwnership(course, userId, userRole);
-    
-    // Validate course is ready to be published
-    this.validatePublishReadiness(course);
-    
-    return await CourseRepository.update(id, { is_published: true });
-  }
+  async togglePublishStatus(courseId, userId, userRole) {
+    // Get existing course
+    const course = await this.getCourseById(courseId);
 
-  /**
-   * Unpublish course
-   * @param {number} id - Course ID
-   * @param {number} userId - User ID
-   * @param {string} userRole - User role
-   * @returns {Promise<Course>}
-   */
-  async unpublishCourse(id, userId, userRole) {
-    const course = await this.getCourseById(id);
-    this.checkOwnership(course, userId, userRole);
-    
-    return await CourseRepository.update(id, { is_published: false });
-  }
+    // Check permissions (only instructor owner or admin)
+    this.checkUpdatePermission(course, userId, userRole);
 
-  /**
-   * Search courses
-   * @param {string} query - Search query
-   * @param {object} filters - Additional filters
-   * @returns {Promise<object>}
-   */
-  async searchCourses(query, filters = {}) {
-    return this.getAllCourses({
-      ...filters,
-      search: query,
-      is_published: true
+    // Toggle publish status
+    const updatedCourse = await CourseRepository.update(courseId, {
+      is_published: !course.is_published,
     });
+
+    return updatedCourse;
+  }
+
+  /**
+   * Get instructor's courses
+   */
+  async getInstructorCourses(instructorId, filters = {}) {
+    return await CourseRepository.findByInstructor(instructorId, filters);
+  }
+
+  /**
+   * Get course statistics
+   */
+  async getCourseStats(courseId, userId, userRole) {
+    // Get course
+    const course = await this.getCourseById(courseId);
+
+    // Check if user has permission to view stats
+    if (userRole !== 'admin' && course.instructor_id !== userId) {
+      throw new ForbiddenError('You do not have permission to view these statistics');
+    }
+
+    const stats = await CourseRepository.getStats(courseId);
+    return stats;
   }
 
   /**
    * Get popular courses
-   * @param {number} limit - Number of courses
-   * @returns {Promise<Course[]>}
    */
   async getPopularCourses(limit = 10) {
-    return await CourseRepository.findPopular(limit);
+    return await CourseRepository.getPopular(limit);
   }
 
   /**
-   * Get top rated courses
-   * @param {number} limit - Number of courses
-   * @returns {Promise<Course[]>}
+   * Search courses
    */
-  async getTopRatedCourses(limit = 10) {
-    return await CourseRepository.findTopRated(limit);
-  }
+  async searchCourses(searchTerm, filters = {}) {
+    if (!searchTerm || searchTerm.trim().length === 0) {
+      throw new ValidationError('Search term is required');
+    }
 
-  /**
-   * Get courses by category
-   * @param {string} category - Category name
-   * @param {object} filters - Additional filters
-   * @returns {Promise<object>}
-   */
-  async getCoursesByCategory(category, filters = {}) {
-    return this.getAllCourses({
-      ...filters,
-      category,
-      is_published: true
-    });
-  }
-
-  /**
-   * Get available categories
-   * @returns {Promise<string[]>}
-   */
-  async getCategories() {
-    return await CourseRepository.getCategories();
+    return await CourseRepository.search(searchTerm, filters);
   }
 
   /**
    * Validate course data
-   * @param {object} courseData - Course data to validate
-   * @throws {ValidationError}
    */
-  validateCourseData(courseData) {
+  validateCourseData(courseData, isUpdate = false) {
     const errors = [];
-    
+
     // Title validation
-    if (courseData.title !== undefined) {
-      if (!courseData.title || courseData.title.trim().length < 5) {
-        errors.push('Title must be at least 5 characters');
+    if (!isUpdate || courseData.title !== undefined) {
+      if (!courseData.title || courseData.title.trim().length < 3) {
+        errors.push('Title must be at least 3 characters');
       }
-      if (courseData.title && courseData.title.length > 255) {
-        errors.push('Title must not exceed 255 characters');
+      if (courseData.title && courseData.title.length > 200) {
+        errors.push('Title must be less than 200 characters');
       }
     }
-    
+
     // Description validation
-    if (courseData.description !== undefined) {
-      if (!courseData.description || courseData.description.trim().length < 20) {
-        errors.push('Description must be at least 20 characters');
+    if (!isUpdate || courseData.description !== undefined) {
+      if (!courseData.description || courseData.description.trim().length < 10) {
+        errors.push('Description must be at least 10 characters');
+      }
+      if (courseData.description && courseData.description.length > 5000) {
+        errors.push('Description must be less than 5000 characters');
       }
     }
-    
+
     // Category validation
-    if (courseData.category !== undefined && !courseData.category) {
-      errors.push('Category is required');
-    }
-    
-    // Difficulty validation
-    if (courseData.difficulty !== undefined) {
-      const validDifficulties = ['beginner', 'intermediate', 'advanced'];
-      if (!validDifficulties.includes(courseData.difficulty)) {
-        errors.push('Invalid difficulty level. Must be: beginner, intermediate, or advanced');
+    if (!isUpdate || courseData.category !== undefined) {
+      const validCategories = [
+        'Web Development',
+        'Mobile Development',
+        'Data Science',
+        'Machine Learning',
+        'Artificial Intelligence',
+        'Cloud Computing',
+        'Cybersecurity',
+        'DevOps',
+        'Database',
+        'Programming Languages',
+        'Software Engineering',
+        'Game Development',
+        'UI/UX Design',
+        'Business',
+        'Marketing',
+        'Other',
+      ];
+
+      if (!courseData.category) {
+        errors.push('Category is required');
+      } else if (!validCategories.includes(courseData.category)) {
+        errors.push('Invalid category');
       }
     }
-    
+
+    // Difficulty level validation
+    if (courseData.difficulty_level !== undefined) {
+      const validLevels = ['beginner', 'intermediate', 'advanced'];
+      if (!validLevels.includes(courseData.difficulty_level)) {
+        errors.push('Difficulty level must be beginner, intermediate, or advanced');
+      }
+    }
+
     // Price validation
     if (courseData.price !== undefined) {
       const price = parseFloat(courseData.price);
       if (isNaN(price) || price < 0) {
         errors.push('Price must be a positive number');
       }
-      if (price > 9999.99) {
-        errors.push('Price must not exceed $9,999.99');
+      if (price > 999999) {
+        errors.push('Price is too high');
       }
     }
-    
-    // Duration validation
-    if (courseData.duration !== undefined && courseData.duration !== null) {
-      const duration = parseInt(courseData.duration);
-      if (isNaN(duration) || duration < 0) {
-        errors.push('Duration must be a positive number (in minutes)');
-      }
-    }
-    
+
     if (errors.length > 0) {
       throw new ValidationError(errors.join(', '));
     }
   }
 
   /**
-   * Validate course is ready to be published
-   * @param {Course} course - Course object
-   * @throws {ValidationError}
+   * Check if user can update course
    */
-  validatePublishReadiness(course) {
-    const errors = [];
-    
-    if (!course.title) errors.push('Title is required');
-    if (!course.description) errors.push('Description is required');
-    if (!course.category) errors.push('Category is required');
-    if (!course.difficulty) errors.push('Difficulty level is required');
-    
-    if (errors.length > 0) {
-      throw new ValidationError(
-        'Course cannot be published: ' + errors.join(', ')
-      );
-    }
-  }
-
-  /**
-   * Check course ownership
-   * @param {Course} course - Course object
-   * @param {number} userId - User ID
-   * @param {string} userRole - User role
-   * @throws {ForbiddenError}
-   */
-  checkOwnership(course, userId, userRole) {
-    // Admins can access any course
+  checkUpdatePermission(course, userId, userRole) {
     if (userRole === 'admin') {
-      return true;
+      return true; // Admin can update any course
     }
-    
-    // Instructors can only access their own courses
+
     if (userRole === 'instructor' && course.instructor_id === userId) {
-      return true;
+      return true; // Instructor can update their own courses
     }
-    
-    throw new ForbiddenError('You do not have permission to access this course');
+
+    throw new ForbiddenError('You do not have permission to update this course');
   }
 
   /**
-   * Get course statistics
-   * @param {number} instructorId - Instructor ID
-   * @returns {Promise<object>}
+   * Check if user can delete course
    */
-  async getInstructorStats(instructorId) {
-    const courses = await CourseRepository.findByInstructor(instructorId);
-    
-    const stats = {
-      totalCourses: courses.length,
-      publishedCourses: courses.filter(c => c.is_published).length,
-      draftCourses: courses.filter(c => !c.is_published).length,
-      totalEnrollments: courses.reduce((sum, c) => sum + c.enrollment_count, 0),
-      averageRating: courses.length > 0
-        ? (courses.reduce((sum, c) => sum + c.rating, 0) / courses.length).toFixed(2)
-        : 0,
-      totalRevenue: courses.reduce((sum, c) => sum + (c.price * c.enrollment_count), 0).toFixed(2)
+  checkDeletePermission(course, userId, userRole) {
+    if (userRole === 'admin') {
+      return true; // Admin can delete any course
+    }
+
+    if (userRole === 'instructor' && course.instructor_id === userId) {
+      return true; // Instructor can delete their own courses
+    }
+
+    throw new ForbiddenError('You do not have permission to delete this course');
+  }
+
+  /**
+   * Validate file upload
+   */
+  validateFileUpload(file, type = 'image') {
+    if (!file) {
+      throw new ValidationError('No file uploaded');
+    }
+
+    const maxSizes = {
+      image: 5 * 1024 * 1024, // 5MB
+      video: 500 * 1024 * 1024, // 500MB
+      document: 10 * 1024 * 1024, // 10MB
     };
-    
-    return stats;
+
+    const allowedMimeTypes = {
+      image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+      video: ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm'],
+      document: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    };
+
+    // Check file size
+    if (file.size > maxSizes[type]) {
+      throw new ValidationError(`File size exceeds maximum allowed (${maxSizes[type] / 1024 / 1024}MB)`);
+    }
+
+    // Check MIME type
+    if (!allowedMimeTypes[type].includes(file.mimetype)) {
+      throw new ValidationError(`Invalid file type. Allowed types: ${allowedMimeTypes[type].join(', ')}`);
+    }
+
+    return true;
   }
 }
 

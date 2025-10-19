@@ -1,208 +1,242 @@
-/**
- * Login Component
- * User login form with validation and role-based navigation
- */
-
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import Input from '../../components/common/Input';
-import Button from '../../components/common/Button';
-import { validateLoginForm, hasErrors } from '../../utils/validation';
+import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
 
 const Login = () => {
-  const navigate = useNavigate();
   const { login } = useAuth();
   const toast = useToast();
-  
+
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
+    password: ''
   });
-  
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
+
   const [showPassword, setShowPassword] = useState(false);
-  
-  // Handle input change
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    
-    // Clear error for this field
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: null,
-      }));
-    }
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    // Clear error when user starts typing
+    if (error) setError('');
   };
-  
-  // Handle form submission
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate form
-    const validationErrors = validateLoginForm(formData);
-    if (hasErrors(validationErrors)) {
-      setErrors(validationErrors);
+    setError('');
+    setLoading(true);
+
+    // Basic validation
+    if (!formData.email || !formData.password) {
+      setError('Please enter both email and password');
+      setLoading(false);
       return;
     }
-    
-    setLoading(true);
-    
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const user = await login(formData.email, formData.password);
+      // Call login from AuthContext
+      await login(formData.email, formData.password);
       
-      toast.success(`Welcome back, ${user.name}!`);
+      // Show success toast
+      toast.success('Welcome back! Logging you in...');
       
-      // Redirect based on role
-      switch (user.role) {
-        case 'student':
-          navigate('/student/dashboard');
-          break;
-        case 'instructor':
-          navigate('/dashboard/instructor');
-          break;
-        case 'admin':
-          navigate('/dashboard/admin');
-          break;
-        default:
-          navigate('/');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error(error.message || 'Invalid email or password');
+      // AuthContext will handle navigation based on user role
+    } catch (err) {
+      console.error('Login error:', err);
+      const errorMessage = err.message || 'Invalid email or password';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
-  
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
         {/* Header */}
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
+        <div className="text-center mb-8">
+          <h2 className="text-4xl font-bold text-gray-900 mb-2">
+            Welcome Back
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link
-              to="/signup"
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
-              create a new account
-            </Link>
+          <p className="text-gray-600">
+            Sign in to continue your learning journey
           </p>
         </div>
-        
-        {/* Form */}
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm space-y-4">
-            <Input
-              label="Email address"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              error={errors.email}
-              placeholder="john@example.com"
-              autoComplete="email"
-              required
-              icon={({ className }) => (
-                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                </svg>
-              )}
-            />
-            
-            <div className="relative">
-              <Input
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                error={errors.password}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required
-                icon={({ className }) => (
-                  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                )}
-              />
-              
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-9 text-gray-400 hover:text-gray-600"
-                tabIndex="-1"
-              >
-                {showPassword ? (
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                  </svg>
-                ) : (
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
-              </button>
+
+        {/* Login Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          {/* Error Alert */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-red-800 font-medium">Login Failed</p>
+                <p className="text-sm text-red-600 mt-1">{error}</p>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                Remember me
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Email Input */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
               </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  placeholder="you@example.com"
+                  disabled={loading}
+                />
+              </div>
             </div>
-            
-            <div className="text-sm">
+
+            {/* Password Input */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  placeholder="Enter your password"
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  disabled={loading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember Me & Forgot Password */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                  Remember me
+                </label>
+              </div>
               <Link
                 to="/forgot-password"
-                className="font-medium text-blue-600 hover:text-blue-500"
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
               >
-                Forgot your password?
+                Forgot password?
               </Link>
             </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
+
+          {/* Quick Test Credentials (Remove in production) */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-xs text-gray-500 text-center mb-3">Quick Test Credentials:</p>
+            <div className="space-y-2 text-xs">
+              <div className="bg-gray-50 rounded p-2">
+                <p className="font-medium text-gray-700">Student:</p>
+                <p className="text-gray-600">aditya@student.com / student123</p>
+              </div>
+              <div className="bg-gray-50 rounded p-2">
+                <p className="font-medium text-gray-700">Instructor:</p>
+                <p className="text-gray-600">rajesh@techlearn.com / instructor123</p>
+              </div>
+              <div className="bg-gray-50 rounded p-2">
+                <p className="font-medium text-gray-700">Admin:</p>
+                <p className="text-gray-600">admin@techlearn.com / admin123</p>
+              </div>
+            </div>
           </div>
-          
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            fullWidth
-            loading={loading}
-            disabled={loading}
-          >
-            Sign in
-          </Button>
-        </form>
-        
-        {/* Demo Credentials */}
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-          <p className="text-sm font-medium text-blue-800 mb-2">Demo Credentials:</p>
-          <div className="text-xs text-blue-700 space-y-1">
-            <p><strong>Student:</strong> student@example.com / Password@123</p>
-            <p><strong>Instructor:</strong> instructor@example.com / Password@123</p>
-            <p><strong>Admin:</strong> admin@example.com / Password@123</p>
+
+          {/* Sign Up Link */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <Link
+                to="/signup"
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                Sign up for free
+              </Link>
+            </p>
           </div>
         </div>
+
+        {/* Footer */}
+        <p className="mt-8 text-center text-xs text-gray-500">
+          By signing in, you agree to our{' '}
+          <a href="#" className="text-indigo-600 hover:text-indigo-500">
+            Terms of Service
+          </a>{' '}
+          and{' '}
+          <a href="#" className="text-indigo-600 hover:text-indigo-500">
+            Privacy Policy
+          </a>
+        </p>
       </div>
     </div>
   );

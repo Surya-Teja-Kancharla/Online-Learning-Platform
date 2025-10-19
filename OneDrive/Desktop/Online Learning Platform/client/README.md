@@ -1,185 +1,70 @@
-# Client (Frontend)
+# Getting Started with Create React App
 
-React-based frontend for the Online Learning Platform.
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Folder Structure
+## Available Scripts
 
-```
-client/
-├── public/                      # Static assets
-│   ├── index.html
-│   ├── favicon.ico
-│   └── manifest.json
-├── src/
-│   ├── components/              # Reusable UI components
-│   │   ├── common/             # Shared components (Button, Input, Modal, etc.)
-│   │   ├── layout/             # Layout components (Header, Footer, Sidebar)
-│   │   ├── auth/               # Authentication components
-│   │   ├── course/             # Course-related components
-│   │   ├── quiz/               # Quiz components
-│   │   └── forum/              # Forum components
-│   ├── pages/                   # Page-level components (Route components)
-│   │   ├── Auth/               # Login, Signup, ForgotPassword
-│   │   ├── Student/            # Student dashboard, courses, profile
-│   │   ├── Instructor/         # Instructor dashboard, course management
-│   │   ├── Admin/              # Admin dashboard, user management
-│   │   ├── Course/             # Course details, player, enrollment
-│   │   └── Common/             # Home, About, Contact, NotFound
-│   ├── services/                # API service layer
-│   │   ├── api.js              # Axios instance configuration
-│   │   ├── authService.js      # Authentication APIs
-│   │   ├── courseService.js    # Course APIs
-│   │   ├── quizService.js      # Quiz APIs
-│   │   ├── forumService.js     # Forum APIs
-│   │   └── userService.js      # User APIs
-│   ├── hooks/                   # Custom React hooks
-│   │   ├── useAuth.js          # Authentication hook
-│   │   ├── useCourse.js        # Course data hook
-│   │   ├── useDebounce.js      # Debounce hook
-│   │   └── useLocalStorage.js  # LocalStorage hook
-│   ├── context/                 # React Context providers
-│   │   ├── AuthContext.js      # Authentication context
-│   │   ├── ThemeContext.js     # Theme (dark/light mode)
-│   │   └── NotificationContext.js # Notification system
-│   ├── utils/                   # Utility functions
-│   │   ├── validation.js       # Form validation helpers
-│   │   ├── formatters.js       # Date, currency formatters
-│   │   ├── constants.js        # App constants
-│   │   └── helpers.js          # General helper functions
-│   ├── assets/                  # Images, fonts, styles
-│   │   ├── images/
-│   │   ├── fonts/
-│   │   └── styles/
-│   ├── App.js                   # Root component
-│   ├── index.js                 # Entry point
-│   └── routes.js               # Route configuration
-├── .env.example                 # Environment variables template
-├── .gitignore
-├── package.json
-├── tailwind.config.js           # TailwindCSS configuration
-├── postcss.config.js            # PostCSS configuration
-└── README.md
-```
+In the project directory, you can run:
 
-## Component Organization
+### `npm start`
 
-### Component Categories
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-1. **Common Components** (`components/common/`)
+The page will reload when you make changes.\
+You may also see any lint errors in the console.
 
-   - Button, Input, Card, Modal, Dropdown
-   - Alert, Badge, Spinner, Tooltip
-   - Form components with validation
+### `npm test`
 
-2. **Layout Components** (`components/layout/`)
+Launches the test runner in the interactive watch mode.\
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-   - Header (with navigation)
-   - Footer
-   - Sidebar (for dashboards)
-   - ProtectedRoute (for role-based access)
+### `npm run build`
 
-3. **Feature Components** (`components/{feature}/`)
-   - Organized by feature domain
-   - Self-contained with related logic
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
 
-### Service Layer Pattern
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!
 
-All API calls go through service files:
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-```javascript
-// Example: services/courseService.js
-import api from "./api";
+### `npm run eject`
 
-export const courseService = {
-  getAllCourses: () => api.get("/courses"),
-  getCourseById: (id) => api.get(`/courses/${id}`),
-  createCourse: (data) => api.post("/courses", data),
-  // ...
-};
-```
+**Note: this is a one-way operation. Once you `eject`, you can't go back!**
 
-### Custom Hooks Pattern
+If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-Encapsulate reusable logic:
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
 
-```javascript
-// Example: hooks/useAuth.js
-export const useAuth = () => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  // Authentication logic
-  return { user, loading, login, logout };
-};
-```
+You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
 
-## Setup Instructions
+## Learn More
 
-### Install Dependencies
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
-```bash
-npm install
-```
+To learn React, check out the [React documentation](https://reactjs.org/).
 
-### Environment Variables
+### Code Splitting
 
-Copy `.env.example` to `.env` and configure:
+This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
 
-```env
-REACT_APP_API_URL=http://localhost:5000/api
-REACT_APP_ENV=development
-```
+### Analyzing the Bundle Size
 
-### Run Development Server
+This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
 
-```bash
-npm start
-```
+### Making a Progressive Web App
 
-### Build for Production
+This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
 
-```bash
-npm run build
-```
+### Advanced Configuration
 
-### Run Tests
+This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
 
-```bash
-npm test
-```
+### Deployment
 
-## Styling
+This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
 
-- **TailwindCSS** for utility-first styling
-- **CSS Modules** for component-specific styles
-- Dark/Light theme support via Context API
+### `npm run build` fails to minify
 
-## State Management
-
-- **Zustand** for global state management
-- **React Query** for server state caching
-- **Context API** for theme and authentication
-
-## Best Practices
-
-1. **Component Design**
-
-   - Keep components small and focused
-   - Use composition over inheritance
-   - Implement proper prop validation
-
-2. **Performance**
-
-   - Lazy load routes and heavy components
-   - Memoize expensive computations
-   - Optimize re-renders with React.memo
-
-3. **Code Quality**
-
-   - Follow ESLint rules
-   - Use Prettier for formatting
-   - Write tests for critical components
-
-4. **Accessibility**
-   - Use semantic HTML
-   - Implement keyboard navigation
-   - Add ARIA labels where needed
+This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)

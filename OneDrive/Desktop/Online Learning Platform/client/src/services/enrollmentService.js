@@ -13,8 +13,16 @@ class EnrollmentService {
   async getMyEnrollments() {
     try {
       const response = await api.get('/enrollments/my-enrollments');
-      return response.data.data.enrollments;
+      console.log('My enrollments response:', response.data);
+      
+      // Handle response format: { success: true, data: { enrollments: [...] } }
+      if (response.data.success) {
+        return response.data.data?.enrollments || response.data.data || [];
+      }
+      
+      return response.data.enrollments || response.data || [];
     } catch (error) {
+      console.error('Get my enrollments error:', error);
       throw error.response?.data || error.message;
     }
   }
@@ -27,8 +35,14 @@ class EnrollmentService {
   async enrollInCourse(courseId) {
     try {
       const response = await api.post('/enrollments/enroll', { course_id: courseId });
-      return response.data.data.enrollment;
+      
+      if (response.data.success) {
+        return response.data.data?.enrollment || response.data.data || {};
+      }
+      
+      return response.data.enrollment || response.data || {};
     } catch (error) {
+      console.error('Enroll in course error:', error);
       throw error.response?.data || error.message;
     }
   }
@@ -41,8 +55,14 @@ class EnrollmentService {
   async getEnrollmentByCourse(courseId) {
     try {
       const response = await api.get(`/enrollments/course/${courseId}`);
-      return response.data.data.enrollment;
+      
+      if (response.data.success) {
+        return response.data.data?.enrollment || response.data.data || null;
+      }
+      
+      return response.data.enrollment || response.data || null;
     } catch (error) {
+      console.error('Get enrollment by course error:', error);
       throw error.response?.data || error.message;
     }
   }
@@ -56,8 +76,14 @@ class EnrollmentService {
   async updateProgress(enrollmentId, progress) {
     try {
       const response = await api.put(`/enrollments/${enrollmentId}/progress`, { progress });
-      return response.data.data.enrollment;
+      
+      if (response.data.success) {
+        return response.data.data?.enrollment || response.data.data || {};
+      }
+      
+      return response.data.enrollment || response.data || {};
     } catch (error) {
+      console.error('Update progress error:', error);
       throw error.response?.data || error.message;
     }
   }
@@ -70,8 +96,14 @@ class EnrollmentService {
   async completeEnrollment(enrollmentId) {
     try {
       const response = await api.post(`/enrollments/${enrollmentId}/complete`);
-      return response.data.data.enrollment;
+      
+      if (response.data.success) {
+        return response.data.data?.enrollment || response.data.data || {};
+      }
+      
+      return response.data.enrollment || response.data || {};
     } catch (error) {
+      console.error('Complete enrollment error:', error);
       throw error.response?.data || error.message;
     }
   }
@@ -83,8 +115,14 @@ class EnrollmentService {
   async getStudentStats() {
     try {
       const response = await api.get('/enrollments/stats');
-      return response.data.data.stats;
+      
+      if (response.data.success) {
+        return response.data.data?.stats || response.data.data || {};
+      }
+      
+      return response.data.stats || response.data || {};
     } catch (error) {
+      console.error('Get student stats error:', error);
       throw error.response?.data || error.message;
     }
   }
@@ -98,6 +136,7 @@ class EnrollmentService {
     try {
       await api.delete(`/enrollments/${enrollmentId}`);
     } catch (error) {
+      console.error('Unenroll error:', error);
       throw error.response?.data || error.message;
     }
   }
@@ -110,11 +149,18 @@ class EnrollmentService {
   async getCourseProgress(courseId) {
     try {
       const response = await api.get(`/enrollments/course/${courseId}/progress`);
-      return response.data.data.progress;
+      
+      if (response.data.success) {
+        return response.data.data?.progress || response.data.data || {};
+      }
+      
+      return response.data.progress || response.data || {};
     } catch (error) {
+      console.error('Get course progress error:', error);
       throw error.response?.data || error.message;
     }
   }
 }
 
-export default new EnrollmentService();
+const enrollmentService = new EnrollmentService();
+export default enrollmentService;

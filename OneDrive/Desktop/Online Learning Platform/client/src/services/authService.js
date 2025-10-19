@@ -1,221 +1,117 @@
 /**
- * AuthService - Frontend Authentication Service
- * Handles all authentication-related API calls and token management
+ * Frontend Auth Service
+ * Handles authentication API calls to the backend
  */
 
-import api from './api';
+import axios from 'axios';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 class AuthService {
   /**
-   * Register a new user
-   * @param {object} userData - User registration data
-   * @returns {Promise<object>} User and token
+   * Login user
+   * @param {string} email 
+   * @param {string} password 
+   * @returns {Promise<object>} user and token
    */
-  async signup(userData) {
+  async login(email, password) {
     try {
-      const response = await api.post('/auth/signup', userData);
+      const response = await axios.post(`${API_URL}/auth/login`, {
+        email,
+        password
+      });
       
-      if (response.data.success) {
-        const { user, token } = response.data.data;
-        this.setAuthData(user, token);
-        return response.data;
+      console.log('Login response:', response.data);
+      
+      if (response.data.success && response.data.data) {
+        const { token, user } = response.data.data;
+        
+        // Store token and user
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        console.log('Token stored:', token);
+        console.log('User stored:', user);
+        
+        return response.data.data;
       }
       
-      throw new Error('Signup failed');
+      throw new Error(response.data.message || 'Login failed');
     } catch (error) {
-      throw error;
+      console.error('Login error:', error);
+      throw new Error(
+        error.response?.data?.message || 
+        error.message || 
+        'Login failed'
+      );
     }
   }
 
   /**
-   * Login user
-   * @param {string} email - User email
-   * @param {string} password - User password
-   * @returns {Promise<object>} User and token
+   * Register new user
+   * @param {object} userData 
+   * @returns {Promise<object>}
    */
-  async login(email, password) {
+  async register(userData) {
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await axios.post(`${API_URL}/auth/register`, userData);
       
-      if (response.data.success) {
-        const { user, token } = response.data.data;
-        this.setAuthData(user, token);
-        return response.data;
+      if (response.data.success && response.data.data) {
+        // Store token in localStorage
+        localStorage.setItem('token', response.data.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        
+        return response.data.data;
       }
       
-      throw new Error('Login failed');
+      throw new Error(response.data.message || 'Registration failed');
     } catch (error) {
-      throw error;
+      throw new Error(
+        error.response?.data?.message || 
+        error.message || 
+        'Registration failed'
+      );
     }
   }
 
   /**
    * Logout user
    */
-  async logout() {
-    try {
-      await api.post('/auth/logout');
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      this.clearAuthData();
-    }
+  logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
   }
 
   /**
-   * Get current user profile
-   * @returns {Promise<object>} User data
-   */
-  async getProfile() {
-    try {
-      const response = await api.get('/auth/me');
-      
-      if (response.data.success) {
-        const user = response.data.data.user;
-        this.setUser(user);
-        return user;
-      }
-      
-      throw new Error('Failed to get profile');
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Verify user role
-   * @returns {Promise<object>} Role verification data
-   */
-  async verifyRole() {
-    try {
-      const response = await api.get('/auth/verify-role');
-      return response.data.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Change password
-   * @param {string} oldPassword - Current password
-   * @param {string} newPassword - New password
-   * @returns {Promise<object>} Response data
-   */
-  async changePassword(oldPassword, newPassword) {
-    try {
-      const response = await api.post('/auth/change-password', {
-        oldPassword,
-        newPassword,
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Request password reset
-   * @param {string} email - User email
-   * @returns {Promise<object>} Response data
-   */
-  async forgotPassword(email) {
-    try {
-      const response = await api.post('/auth/forgot-password', { email });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Reset password with token
-   * @param {string} token - Reset token
-   * @param {string} newPassword - New password
-   * @returns {Promise<object>} Response data
-   */
-  async resetPassword(token, newPassword) {
-    try {
-      const response = await api.post('/auth/reset-password', {
-        token,
-        newPassword,
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Refresh JWT token
-   * @returns {Promise<string>} New token
-   */
-  async refreshToken() {
-    try {
-      const response = await api.post('/auth/refresh-token');
-      
-      if (response.data.success) {
-        const token = response.data.data.token;
-        this.setToken(token);
-        return token;
-      }
-      
-      throw new Error('Token refresh failed');
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Set authentication data in localStorage
-   * @param {object} user - User object
-   * @param {string} token - JWT token
-   */
-  setAuthData(user, token) {
-    localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('token', token);
-  }
-
-  /**
-   * Set user data in localStorage
-   * @param {object} user - User object
-   */
-  setUser(user) {
-    localStorage.setItem('user', JSON.stringify(user));
-  }
-
-  /**
-   * Set token in localStorage
-   * @param {string} token - JWT token
-   */
-  setToken(token) {
-    localStorage.setItem('token', token);
-  }
-
-  /**
-   * Clear authentication data from localStorage
+   * Clear authentication data (alias for logout)
    */
   clearAuthData() {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    this.logout();
+  }
+
+  /**
+   * Clear authentication data (alias for logout)
+   */
+  clearAuthData() {
+    this.logout();
   }
 
   /**
    * Get current user from localStorage
-   * @returns {object|null} User object or null
+   * @returns {object|null}
    */
   getCurrentUser() {
     try {
-      const userStr = localStorage.getItem('user');
-      return userStr ? JSON.parse(userStr) : null;
+      const user = localStorage.getItem('user');
+      return user ? JSON.parse(user) : null;
     } catch (error) {
-      console.error('Error parsing user data:', error);
       return null;
     }
   }
 
   /**
-   * Get token from localStorage
-   * @returns {string|null} Token or null
+   * Get stored token
+   * @returns {string|null}
    */
   getToken() {
     return localStorage.getItem('token');
@@ -230,67 +126,62 @@ class AuthService {
   }
 
   /**
-   * Check if user has specific role
-   * @param {string} role - Role to check
-   * @returns {boolean}
+   * Get current user from API
+   * @returns {Promise<object>}
    */
-  hasRole(role) {
-    const user = this.getCurrentUser();
-    return user && user.role === role;
+  async fetchCurrentUser() {
+    try {
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      const response = await axios.get(`${API_URL}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.data.success && response.data.data) {
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        return response.data.data.user;
+      }
+
+      throw new Error('Failed to fetch user');
+    } catch (error) {
+      this.logout();
+      throw error;
+    }
   }
 
   /**
-   * Check if user is admin
-   * @returns {boolean}
+   * Change password
+   * @param {string} oldPassword 
+   * @param {string} newPassword 
+   * @returns {Promise<object>}
    */
-  isAdmin() {
-    return this.hasRole('admin');
-  }
+  async changePassword(oldPassword, newPassword) {
+    try {
+      const token = this.getToken();
+      const response = await axios.post(
+        `${API_URL}/auth/change-password`,
+        { oldPassword, newPassword },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
-  /**
-   * Check if user is instructor
-   * @returns {boolean}
-   */
-  isInstructor() {
-    return this.hasRole('instructor');
-  }
-
-  /**
-   * Check if user is student
-   * @returns {boolean}
-   */
-  isStudent() {
-    return this.hasRole('student');
-  }
-
-  /**
-   * Get user's role
-   * @returns {string|null} User role or null
-   */
-  getUserRole() {
-    const user = this.getCurrentUser();
-    return user ? user.role : null;
-  }
-
-  /**
-   * Get redirect path based on user role
-   * @returns {string} Dashboard path
-   */
-  getRoleDashboard() {
-    const role = this.getUserRole();
-    
-    switch (role) {
-      case 'student':
-        return '/dashboard/student';
-      case 'instructor':
-        return '/dashboard/instructor';
-      case 'admin':
-        return '/dashboard/admin';
-      default:
-        return '/login';
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.message || 
+        error.message || 
+        'Password change failed'
+      );
     }
   }
 }
 
-// Export singleton instance
 export default new AuthService();

@@ -7,260 +7,166 @@ import api from './api';
 
 class CourseService {
   /**
-   * Get all courses for authenticated instructor
-   * @returns {Promise<Array>} - Instructor's courses
-   */
-  async getInstructorCourses(filters = {}) {
-    try {
-      const params = new URLSearchParams();
-      
-      if (filters.page) params.append('page', filters.page);
-      if (filters.limit) params.append('limit', filters.limit);
-      if (filters.is_published !== undefined) {
-        params.append('is_published', filters.is_published);
-      }
-      if (filters.sortBy) params.append('sortBy', filters.sortBy);
-      if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
-
-      const response = await api.get(`/courses/instructor/me?${params}`);
-      return response.data.data.courses;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  }
-
-  /**
-   * Get instructor statistics
-   * @returns {Promise<Object>} - Statistics
-   */
-  async getInstructorStats() {
-    try {
-      const response = await api.get('/courses/instructor/stats');
-      return response.data.data.stats;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  }
-
-  /**
-   * Get all published courses
-   * @param {Object} filters - Filter options
-   * @returns {Promise<Object>} - Courses with pagination
+   * Get all published courses with filters
    */
   async getPublishedCourses(filters = {}) {
     try {
       const params = new URLSearchParams();
       
-      if (filters.page) params.append('page', filters.page);
-      if (filters.limit) params.append('limit', filters.limit);
       if (filters.category) params.append('category', filters.category);
       if (filters.difficulty) params.append('difficulty', filters.difficulty);
       if (filters.search) params.append('search', filters.search);
       if (filters.minPrice) params.append('minPrice', filters.minPrice);
       if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
-      if (filters.sortBy) params.append('sortBy', filters.sortBy);
-      if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+      if (filters.page) params.append('page', filters.page);
+      if (filters.limit) params.append('limit', filters.limit);
 
-      const response = await api.get(`/courses/published?${params}`);
-      return response.data;
+      const response = await api.get(`/courses/published?${params.toString()}`);
+      
+      console.log('Published courses response:', response.data);
+      
+      // Backend returns: { success: true, data: [courses], pagination: {...} }
+      if (response.data.success && Array.isArray(response.data.data)) {
+        return response.data.data;
+      }
+      
+      // Fallback for other formats
+      return response.data.courses || response.data.data?.courses || response.data || [];
     } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Get published courses error:', error);
+      throw error;
     }
   }
 
   /**
    * Get course by ID
-   * @param {number} id - Course ID
-   * @returns {Promise<Object>} - Course details
    */
-  async getCourseById(id) {
+  async getCourseById(courseId) {
     try {
-      const response = await api.get(`/courses/${id}`);
-      return response.data.data.course;
+      const response = await api.get(`/courses/${courseId}`);
+      return response.data.data.course || response.data.course || response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  }
-
-  /**
-   * Create new course
-   * @param {FormData} formData - Course data with files
-   * @param {Function} onProgress - Upload progress callback
-   * @returns {Promise<Object>} - Created course
-   */
-  async createCourse(formData, onProgress) {
-    try {
-      const response = await api.post('/courses', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          if (onProgress) {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            onProgress(percentCompleted);
-          }
-        },
-      });
-      return response.data.data.course;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  }
-
-  /**
-   * Update course
-   * @param {number} id - Course ID
-   * @param {FormData} formData - Updated course data
-   * @param {Function} onProgress - Upload progress callback
-   * @returns {Promise<Object>} - Updated course
-   */
-  async updateCourse(id, formData, onProgress) {
-    try {
-      const response = await api.put(`/courses/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          if (onProgress) {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            onProgress(percentCompleted);
-          }
-        },
-      });
-      return response.data.data.course;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  }
-
-  /**
-   * Delete course
-   * @param {number} id - Course ID
-   * @returns {Promise<void>}
-   */
-  async deleteCourse(id) {
-    try {
-      await api.delete(`/courses/${id}`);
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  }
-
-  /**
-   * Publish course
-   * @param {number} id - Course ID
-   * @returns {Promise<Object>} - Updated course
-   */
-  async publishCourse(id) {
-    try {
-      const response = await api.post(`/courses/${id}/publish`);
-      return response.data.data.course;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  }
-
-  /**
-   * Unpublish course
-   * @param {number} id - Course ID
-   * @returns {Promise<Object>} - Updated course
-   */
-  async unpublishCourse(id) {
-    try {
-      const response = await api.post(`/courses/${id}/unpublish`);
-      return response.data.data.course;
-    } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Get course by ID error:', error);
+      throw error;
     }
   }
 
   /**
    * Search courses
-   * @param {string} query - Search query
-   * @param {Object} filters - Additional filters
-   * @returns {Promise<Object>} - Search results
    */
   async searchCourses(query, filters = {}) {
     try {
-      const params = new URLSearchParams({ q: query });
+      const params = new URLSearchParams();
+      params.append('search', query);
       
-      if (filters.page) params.append('page', filters.page);
-      if (filters.limit) params.append('limit', filters.limit);
       if (filters.category) params.append('category', filters.category);
       if (filters.difficulty) params.append('difficulty', filters.difficulty);
+      if (filters.page) params.append('page', filters.page);
+      if (filters.limit) params.append('limit', filters.limit);
 
-      const response = await api.get(`/courses/search?${params}`);
-      return response.data;
+      const response = await api.get(`/courses/search?${params.toString()}`);
+      
+      if (response.data.success) {
+        return response.data.data.courses || [];
+      }
+      
+      return response.data.courses || response.data || [];
     } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Search courses error:', error);
+      throw error;
     }
   }
 
   /**
    * Get popular courses
-   * @param {number} limit - Number of courses
-   * @returns {Promise<Array>} - Popular courses
    */
   async getPopularCourses(limit = 10) {
     try {
       const response = await api.get(`/courses/popular?limit=${limit}`);
-      return response.data.data.courses;
+      
+      if (response.data.success) {
+        return response.data.data.courses || [];
+      }
+      
+      return response.data.courses || response.data || [];
     } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Get popular courses error:', error);
+      throw error;
     }
   }
 
   /**
-   * Get top rated courses
-   * @param {number} limit - Number of courses
-   * @returns {Promise<Array>} - Top rated courses
+   * Get course content
    */
-  async getTopRatedCourses(limit = 10) {
+  async getCourseContent(courseId) {
     try {
-      const response = await api.get(`/courses/top-rated?limit=${limit}`);
-      return response.data.data.courses;
+      const response = await api.get(`/courses/${courseId}/content`);
+      
+      if (response.data.success) {
+        return response.data.data.content || [];
+      }
+      
+      return response.data.content || response.data || [];
     } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Get course content error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get course by ID with full details (content, instructor, etc.)
+   */
+  async getCourseDetails(courseId) {
+    try {
+      const response = await api.get(`/courses/${courseId}/details`);
+      
+      if (response.data.success) {
+        return response.data.data || response.data;
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Get course details error:', error);
+      throw error;
     }
   }
 
   /**
    * Get courses by category
-   * @param {string} category - Category name
-   * @param {Object} filters - Additional filters
-   * @returns {Promise<Object>} - Courses in category
    */
-  async getCoursesByCategory(category, filters = {}) {
+  async getCoursesByCategory(category) {
     try {
-      const params = new URLSearchParams();
+      const response = await api.get(`/courses/category/${category}`);
       
-      if (filters.page) params.append('page', filters.page);
-      if (filters.limit) params.append('limit', filters.limit);
-      if (filters.difficulty) params.append('difficulty', filters.difficulty);
-
-      const response = await api.get(`/courses/category/${category}?${params}`);
-      return response.data;
+      if (response.data.success) {
+        return response.data.data.courses || [];
+      }
+      
+      return response.data.courses || response.data || [];
     } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Get courses by category error:', error);
+      throw error;
     }
   }
 
   /**
-   * Get available categories
-   * @returns {Promise<Array>} - Category list
+   * Get featured courses
    */
-  async getCategories() {
+  async getFeaturedCourses() {
     try {
-      const response = await api.get('/courses/categories');
-      return response.data.data.categories;
+      const response = await api.get('/courses/featured');
+      
+      if (response.data.success) {
+        return response.data.data.courses || [];
+      }
+      
+      return response.data.courses || response.data || [];
     } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Get featured courses error:', error);
+      throw error;
     }
   }
 }
 
-export default new CourseService();
+const courseService = new CourseService();
+export default courseService;

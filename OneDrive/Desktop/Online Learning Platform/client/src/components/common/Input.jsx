@@ -1,6 +1,6 @@
 /**
  * Input Component
- * Reusable input field with validation and error display
+ * Reusable input field with validation and icons
  */
 
 import React from 'react';
@@ -14,14 +14,15 @@ const Input = ({
   onBlur,
   error,
   placeholder,
+  autoComplete,
   required = false,
   disabled = false,
-  autoComplete,
   icon: Icon,
   className = '',
+  ...props
 }) => {
   return (
-    <div className={`mb-4 ${className}`}>
+    <div className={className}>
       {label && (
         <label
           htmlFor={name}
@@ -40,38 +41,49 @@ const Input = ({
         )}
         
         <input
-          type={type}
           id={name}
+          type={type}
           name={name}
           value={value}
           onChange={onChange}
           onBlur={onBlur}
           placeholder={placeholder}
-          disabled={disabled}
           autoComplete={autoComplete}
+          required={required}
+          disabled={disabled}
           className={`
-            block w-full px-3 py-2 border rounded-md shadow-sm
-            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-            disabled:bg-gray-100 disabled:cursor-not-allowed
-            ${Icon ? 'pl-10' : ''}
-            ${error 
-              ? 'border-red-300 text-red-900 placeholder-red-300' 
-              : 'border-gray-300 placeholder-gray-400'
+            block w-full rounded-md shadow-sm transition-colors
+            ${Icon ? 'pl-10' : 'pl-3'}
+            pr-3 py-2
+            ${error
+              ? 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500'
+              : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
             }
+            ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
+            text-sm
           `}
-          aria-invalid={error ? 'true' : 'false'}
-          aria-describedby={error ? `${name}-error` : undefined}
+          {...props}
         />
+        
+        {error && (
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <svg
+              className="h-5 w-5 text-red-500"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+        )}
       </div>
       
       {error && (
-        <p
-          id={`${name}-error`}
-          className="mt-1 text-sm text-red-600"
-          role="alert"
-        >
-          {error}
-        </p>
+        <p className="mt-1 text-sm text-red-600">{error}</p>
       )}
     </div>
   );

@@ -126,4 +126,6 @@ class LessonService {
   }
 }
 
-export default new LessonService();
+
+const lessonService = new LessonService();
+export default lessonService;

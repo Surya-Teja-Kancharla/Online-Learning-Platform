@@ -1,27 +1,23 @@
 /**
- * RBAC Middleware - Role-Based Access Control
+ * RBAC (Role-Based Access Control) Middleware
  * Restricts access based on user roles
  */
 
-const { ForbiddenError, UnauthorizedError } = require('../utils/errors');
+const { ForbiddenError } = require('../utils/errors');
 
 /**
- * Check if user has required role(s)
- * @param {string|string[]} allowedRoles - Single role or array of roles
- * @returns {Function} Express middleware
+ * Authorize specific roles
+ * @param {string[]} roles - Array of allowed roles
  */
-const authorize = (allowedRoles) => {
+const authorizeRoles = (roles) => {
   return (req, res, next) => {
     try {
-      // Ensure user is authenticated
+      // Check if user exists (should be set by authenticate middleware)
       if (!req.user) {
-        throw new UnauthorizedError('Authentication required');
+        throw new ForbiddenError('User authentication required');
       }
 
-      // Convert single role to array
-      const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
-
-      // Check if user has required role
+      // Check if user has one of the allowed roles
       if (!roles.includes(req.user.role)) {
         throw new ForbiddenError(
           `Access denied. Required role: ${roles.join(' or ')}`
@@ -36,54 +32,51 @@ const authorize = (allowedRoles) => {
 };
 
 /**
- * Allow only students
+ * Authorize admin only
  */
-const studentOnly = authorize('student');
+const authorizeAdmin = (req, res, next) => {
+  return authorizeRoles(['admin'])(req, res, next);
+};
 
 /**
- * Allow only instructors
+ * Authorize instructor or admin
  */
-const instructorOnly = authorize('instructor');
+const authorizeInstructorOrAdmin = (req, res, next) => {
+  return authorizeRoles(['instructor', 'admin'])(req, res, next);
+};
 
 /**
- * Allow only admins
+ * Authorize student only
  */
-const adminOnly = authorize('admin');
+const authorizeStudent = (req, res, next) => {
+  return authorizeRoles(['student'])(req, res, next);
+};
 
 /**
- * Allow instructors and admins
+ * Check if user is owner or admin
+ * Useful for resource-specific permissions
  */
-const instructorOrAdmin = authorize(['instructor', 'admin']);
-
-/**
- * Allow students and instructors (not admins)
- */
-const studentOrInstructor = authorize(['student', 'instructor']);
-
-/**
- * Check if user owns the resource
- * @param {Function} getResourceOwnerId - Function to get resource owner ID
- * @returns {Function} Express middleware
- */
-const checkOwnership = (getResourceOwnerId) => {
-  return async (req, res, next) => {
+const authorizeOwnerOrAdmin = (ownerIdField = 'user_id') => {
+  return (req, res, next) => {
     try {
-      // Ensure user is authenticated
       if (!req.user) {
-        throw new UnauthorizedError('Authentication required');
+        throw new ForbiddenError('User authentication required');
       }
 
-      // Admins can access everything
+      // Admin can access everything
       if (req.user.role === 'admin') {
         return next();
       }
 
-      // Get resource owner ID
-      const ownerId = await getResourceOwnerId(req);
+      // Check ownership (assumes resource is loaded in req.resource)
+      const resourceOwnerId = req.resource?.[ownerIdField];
+      
+      if (!resourceOwnerId) {
+        throw new ForbiddenError('Resource owner not found');
+      }
 
-      // Check ownership
-      if (req.user.id !== ownerId) {
-        throw new ForbiddenError('You do not own this resource');
+      if (req.user.id !== resourceOwnerId) {
+        throw new ForbiddenError('You do not have permission to access this resource');
       }
 
       next();
@@ -94,73 +87,45 @@ const checkOwnership = (getResourceOwnerId) => {
 };
 
 /**
- * Check if user owns resource or is admin
- * @param {Function} getResourceOwnerId - Function to get resource owner ID
- * @returns {Function} Express middleware
+ * Optional authentication
+ * Attaches user if token exists, but doesn't fail if no token
  */
-const ownerOrAdmin = (getResourceOwnerId) => {
-  return async (req, res, next) => {
-    try {
-      // Ensure user is authenticated
-      if (!req.user) {
-        throw new UnauthorizedError('Authentication required');
-      }
-
-      // Admins can access everything
-      if (req.user.role === 'admin') {
-        return next();
-      }
-
-      // Get resource owner ID
-      const ownerId = await getResourceOwnerId(req);
-
-      // Check ownership
-      if (req.user.id !== ownerId) {
-        throw new ForbiddenError('Access denied. You must be the owner or an admin');
-      }
-
-      next();
-    } catch (error) {
-      next(error);
+const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const AuthService = require('../services/AuthService');
+      const user = await AuthService.getUserByToken(token);
+      req.user = user;
     }
-  };
+    
+    next();
+  } catch (error) {
+    // Continue without user if authentication fails
+    next();
+  }
 };
 
 /**
- * Custom role check with callback
- * @param {Function} checkFunction - Custom check function
- * @returns {Function} Express middleware
+ * Convenience functions for common role checks
  */
-const customAuthorize = (checkFunction) => {
-  return async (req, res, next) => {
-    try {
-      // Ensure user is authenticated
-      if (!req.user) {
-        throw new UnauthorizedError('Authentication required');
-      }
+const instructorOnly = (req, res, next) => {
+  return authorizeRoles(['instructor', 'admin'])(req, res, next);
+};
 
-      // Run custom check
-      const isAuthorized = await checkFunction(req);
-
-      if (!isAuthorized) {
-        throw new ForbiddenError('Access denied');
-      }
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
+const studentOnly = (req, res, next) => {
+  return authorizeRoles(['student'])(req, res, next);
 };
 
 module.exports = {
-  authorize,
-  studentOnly,
+  authorizeRoles,
+  authorizeAdmin,
+  authorizeInstructorOrAdmin,
+  authorizeStudent,
+  authorizeOwnerOrAdmin,
+  optionalAuth,
   instructorOnly,
-  adminOnly,
-  instructorOrAdmin,
-  studentOrInstructor,
-  checkOwnership,
-  ownerOrAdmin,
-  customAuthorize
+  studentOnly,
 };
